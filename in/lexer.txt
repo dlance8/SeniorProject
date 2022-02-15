@@ -1,0 +1,76 @@
+input element =
+
+    (* WHITE SPACE *)
+          SP | HT | FF | line terminator (* WHITESPACE *)
+
+    (* COMMENT *)
+        | "/" , "*" , comment tail
+        | "/" , "/" , { input character }
+
+    (* IDENTIFIER *)
+        | ( java letter , { java letter or digit } ) - ( keyword | boolean literal | null literal )
+
+    (* KEYWORD *)
+        | "abstract" | "assert" | "boolean" | "break" | "byte" | "case" | "catch" | "char" | "class" | "const"
+        | "continue" | "default" | "do" | "double" | "else" | "enum" | "extends" | "final" | "finally" | "float" | "for"
+        | "goto" | "if" | "implements" | "import" | "instanceof" | "int" | "interface" | "long" | "native" | "new"
+        | "package" | "private" | "protected" | "public" | "return" | "short" | "static" | "strictfp" | "super"
+        | "switch" | "synchronized" | "this" | "throw" | "throws" | "transient" | "try" | "void" | "volatile" | "while"
+
+    (* DECIMAL INTEGER LITERAL *)
+        | "0" , [ integer type suffix ]
+        | non zero digit , [ integer type suffix ]
+        | non zero digit , digits , [ integer type suffix ]
+        | non zero digit , underscores , digits , [ integer type suffix ]
+
+    (* HEXADECIMAL INTEGER LITERAL *)
+        | "0" , ( "x" | "X" ) , hex digits , [ integer type suffix ]
+
+    (* OCTAL INTEGER LITERAL *)
+        | "0" , [ underscores ] , octal digits , [ integer type suffix ]
+        | "0" , ( "b" | "B" ) , binary digits , [ integer type suffix ]
+
+    (* DECIMAL FLOATING POINT LITERAL *)
+        | digits , "."
+        | digits , "." ,                          float type suffix
+        | digits , "." ,          exponent part
+        | digits , "." ,          exponent part , float type suffix
+        | digits , "." , digits
+        | digits , "." , digits ,                 float type suffix
+        | digits , "." , digits , exponent part
+        | digits , "." , digits , exponent part , float type suffix
+        | digits ,                exponent part
+        | digits ,                exponent part , float type suffix
+        | digits ,                                float type suffix
+        |          "." , digits
+        |          "." , digits ,                 float type suffix
+        |          "." , digits , exponent part
+        |          "." , digits , exponent part , float type suffix
+
+    (* HEXADECIMAL FLOATING POINT LITERAL *)
+        | "0" , ( "x" | "X" ) , hex digits ,                    binary exponent indicator , signed integer , [ float type suffix ]
+        | "0" , ( "x" | "X" ) , hex digits , "." ,              binary exponent indicator , signed integer , [ float type suffix ]
+        | "0" , ( "x" | "X" ) , hex digits , "." , hex digits , binary exponent indicator , signed integer , [ float type suffix ]
+        | "0" , ( "x" | "X" ) ,              "." , hex digits , binary exponent indicator , signed integer , [ float type suffix ]
+
+    (* BOOLEAN LITERAL *)
+        | "true"
+        | "false"
+
+    (* CHARACTER LITERAL *)
+        | "'" , single character , "'"
+        | "'" , escape sequence , "'"
+
+    (* STRING LITERAL *)
+        | '"' , { string character } , '"'
+
+    (* NULL LITERAL *)
+        | "null"
+
+    (* SEPARATOR *)
+        | "(" | ")" | "{" , "}" | "[" , "]" | ";" | "," | "." | "..." | "@" | "::"
+
+    (* OPERATOR *)
+        | "=" | ">" | "<" | "!" | "~" | "?" | ":" | "->" | "==" | ">=" | "<=" | "!=" | "&&" | "||" | "++" | "--" | "+"
+        | "-" | "*" | "/" | "&" | "|" | "^" | "%" | "<<" | ">>" | ">>>" | "+=" | "-=" | "*=" | "/=" | "&=" | "|=" | "^="
+        | "%=" | "<<=" | ">>=" | ">>>=" ;

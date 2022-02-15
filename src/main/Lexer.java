@@ -1,457 +1,748 @@
 package main;
-
-import java.io.File;
-import java.io.FileNotFoundException;
+import java.io.*;
 import java.util.*;
-
 public class Lexer {
-    private static final HashMap<String, Terminal> TERMINALS;
-    static {
-        TERMINALS = new HashMap<>();
+	private boolean lexing;
+	private char currentChar;
+	private int currentIndex, line, column;
+	private ArrayList<Token> tokens;
+	private String in;
+	private StringBuilder currentString = new StringBuilder();
 
-        // RESERVED WORDS
-        TERMINALS.put("abstract",       Terminal.ABSTRACT                   );
-        TERMINALS.put("assert",         Terminal.ASSERT                     );
-        TERMINALS.put("boolean",        Terminal.BOOLEAN                    );
-        TERMINALS.put("break",          Terminal.BREAK                      );
-        TERMINALS.put("byte",           Terminal.BYTE                       );
-        TERMINALS.put("case",           Terminal.CASE                       );
-        TERMINALS.put("catch",          Terminal.CATCH                      );
-        TERMINALS.put("char",           Terminal.CHAR                       );
-        TERMINALS.put("class",          Terminal.CLASS                      );
-        TERMINALS.put("const",          Terminal.CONST                      );
-        TERMINALS.put("continue",       Terminal.CONTINUE                   );
-        TERMINALS.put("default",        Terminal.DEFAULT                    );
-        TERMINALS.put("do",             Terminal.DO                         );
-        TERMINALS.put("double",         Terminal.DOUBLE                     );
-        TERMINALS.put("else",           Terminal.ELSE                       );
-        TERMINALS.put("enum",           Terminal.ENUM                       );
-        TERMINALS.put("extends",        Terminal.EXTENDS                    );
-        TERMINALS.put("final",          Terminal.FINAL                      );
-        TERMINALS.put("finally",        Terminal.FINALLY                    );
-        TERMINALS.put("float",          Terminal.FLOAT                      );
-        TERMINALS.put("for",            Terminal.FOR                        );
-        TERMINALS.put("goto",           Terminal.GOTO                       );
-        TERMINALS.put("if",             Terminal.IF                         );
-        TERMINALS.put("implements",     Terminal.IMPLEMENTS                 );
-        TERMINALS.put("import",         Terminal.IMPORT                     );
-        TERMINALS.put("instanceof",     Terminal.INSTANCEOF                 );
-        TERMINALS.put("int",            Terminal.INT                        );
-        TERMINALS.put("interface",      Terminal.INTERFACE                  );
-        TERMINALS.put("long",           Terminal.LONG                       );
-        TERMINALS.put("native",         Terminal.NATIVE                     );
-        TERMINALS.put("new",            Terminal.NEW                        );
-        TERMINALS.put("null",           Terminal.NULL                       );
-        TERMINALS.put("package",        Terminal.PACKAGE                    );
-        TERMINALS.put("private",        Terminal.PRIVATE                    );
-        TERMINALS.put("protected",      Terminal.PROTECTED                  );
-        TERMINALS.put("public",         Terminal.PUBLIC                     );
-        TERMINALS.put("return",         Terminal.RETURN                     );
-        TERMINALS.put("short",          Terminal.SHORT                      );
-        TERMINALS.put("static",         Terminal.STATIC                     );
-        TERMINALS.put("strictfp",       Terminal.STRICTFP                   );
-        TERMINALS.put("super",          Terminal.SUPER                      );
-        TERMINALS.put("switch",         Terminal.SWITCH                     );
-        TERMINALS.put("synchronized",   Terminal.SYNCHRONIZED               );
-        TERMINALS.put("this",           Terminal.THIS                       );
-        TERMINALS.put("throw",          Terminal.THROW                      );
-        TERMINALS.put("throws",         Terminal.THROWS                     );
-        TERMINALS.put("transient",      Terminal.TRANSIENT                  );
-        TERMINALS.put("try",            Terminal.TRY                        );
-        TERMINALS.put("void",           Terminal.VOID                       );
-        TERMINALS.put("volatile",       Terminal.VOLATILE                   );
-        TERMINALS.put("while",          Terminal.WHILE                      );
+	public ArrayList<Token> lex(String fileName) throws IOException {
+		step1(fileName);
+		step2();
+		step3();
+		step4();
+		return tokens;
+	}
 
-
-        // ARITHMETIC
-        TERMINALS.put("+",              Terminal.ADD                        );
-        TERMINALS.put("-",              Terminal.SUBTRACT                   );
-        TERMINALS.put("*",              Terminal.MULTIPLY                   );
-        TERMINALS.put("/",              Terminal.DIVIDE                     );
-        TERMINALS.put("%",              Terminal.MODULO                     );
-        TERMINALS.put("++",             Terminal.INCREMENT                  );
-        TERMINALS.put("--",             Terminal.DECREMENT                  );
-
-        // BITWISE
-        TERMINALS.put("&",              Terminal.AND                        );
-        TERMINALS.put("|",              Terminal.OR                         );
-        TERMINALS.put("^",              Terminal.XOR                        );
-        TERMINALS.put("~",              Terminal.BITWISE_COMPLEMENT         );
-
-        // LOGIC
-        TERMINALS.put("&&",             Terminal.AND_GATE                   );
-        TERMINALS.put("||",             Terminal.OR_GATE                    );
-        TERMINALS.put("!",              Terminal.NOT                        );
-
-        // SHIFT
-        TERMINALS.put("<<",             Terminal.LEFT_SHIFT                 );
-        TERMINALS.put(">>",             Terminal.RIGHT_SHIFT                );
-        TERMINALS.put(">>>",            Terminal.UNSIGNED_RIGHT_SHIFT       );
-
-        // ASSIGNMENT
-        TERMINALS.put("=",              Terminal.ASSIGN                     );
-
-        TERMINALS.put("+=",             Terminal.ASSIGN_ADD                 );
-        TERMINALS.put("-=",             Terminal.ASSIGN_SUBTRACT);
-        TERMINALS.put("*=",             Terminal.ASSIGN_MULTIPLY);
-        TERMINALS.put("/=",             Terminal.ASSIGN_DIVIDE);
-
-        TERMINALS.put("%=",             Terminal.ASSIGN_MOD                 );
-        TERMINALS.put("&=",             Terminal.ASSIGN_AND                 );
-        TERMINALS.put("|=",             Terminal.ASSIGN_OR                  );
-        TERMINALS.put("^=",             Terminal.ASSIGN_XOR                 );
-
-        TERMINALS.put("<<=",            Terminal.ASSIGN_LEFT_SHIFT);
-        TERMINALS.put(">>=",            Terminal.ASSIGN_RIGHT_SHIFT);
-        TERMINALS.put(">>>=",           Terminal.ASSIGN_UNSIGNED_RIGHT_SHIFT);
-
-        // COMPARISON
-        TERMINALS.put("==",             Terminal.EQUAL_TO                   );
-        TERMINALS.put("!=",             Terminal.NOT_EQUAL_TO               );
-        TERMINALS.put("<",              Terminal.LESS_THAN                  );
-        TERMINALS.put("<=",             Terminal.LESS_THAN_OR_EQUAL_TO      );
-        TERMINALS.put(">",              Terminal.GREATER_THAN               );
-        TERMINALS.put(">=",             Terminal.GREATER_THAN_OR_EQUAL_TO   );
-
-        // OTHER
-        TERMINALS.put(";",              Terminal.SEMICOLON                  );
-
-        TERMINALS.put("(",              Terminal.OPEN_PARENTHESIS           );
-        TERMINALS.put(")",              Terminal.CLOSE_PARENTHESIS          );
-        TERMINALS.put("[",              Terminal.OPEN_BRACKET               );
-        TERMINALS.put("]",              Terminal.CLOSE_BRACKET              );
-        TERMINALS.put("{",              Terminal.OPEN_BRACE                 );
-        TERMINALS.put("}",              Terminal.CLOSE_BRACE                );
-
-        TERMINALS.put(".",              Terminal.DOT                        );
-        TERMINALS.put(",",              Terminal.COMMA                      );
-
-        TERMINALS.put(":",              Terminal.COLON                      );
-        TERMINALS.put("?",              Terminal.TERNARY                    );
-
-        TERMINALS.put("'",              Terminal.CHARACTER_MARKER           );
-        TERMINALS.put("\"",             Terminal.STRING_MARKER              );
-
-        TERMINALS.put("->",             Terminal.LAMBDA                     );
-        TERMINALS.put("::",             Terminal.DOUBLE_COLON               );
-
-        TERMINALS.put("//",             Terminal.LINE_COMMENT               );
-        TERMINALS.put("/*",             Terminal.BLOCK_COMMENT_START        );
-        TERMINALS.put("*/",             Terminal.BLOCK_COMMENT_END          );
-    }
-
-
-    private String path, currentLine;
-    private boolean hasNextChar;
-    private char currentChar, lookAhead;
-    private int currentIndex, line, column;
-
-    private void startLine() {
-        currentIndex = -1;
-        column = 0;
-        readNextChar();
-    }
-    private boolean nextChar() {
-        final boolean hasMore = hasNextChar;
-        ++currentIndex;
-        if (hasMore) {
-            ++column;
-            currentChar = lookAhead;
-            readNextChar();
-        }
-        return hasMore;
-    }
-
-    private void readNextChar() {
-        hasNextChar = currentIndex < currentLine.length() - 1;
-        lookAhead = hasNextChar ? currentLine.charAt(currentIndex + 1) : 0;
-    }
-
-
-    private boolean characterIsWhitespace(char character) {
-        return character == ' ' || character == '\t' || character == '\n';
-    }
-    private boolean characterIsWhitespace() {
-        return characterIsWhitespace(currentChar);
-    }
-    private boolean characterIsBracket(char character) {
-        return character == '(' || character == ')' || character == '[' || character == ']'
-                || character == '{' || character == '}';
-    }
-    private boolean characterIsBracket() {
-        return characterIsBracket(currentChar);
-    }
-    private boolean characterIsDSU(char character) {
-        return character == '$' || character == '_';
-    }
-    private boolean characterIsDSU() {
-        return characterIsDSU(currentChar);
-    }
-    private boolean characterIsDigit(char character) {
-        // character = 0, 1, 2, 3, 4, 5, 6, 7, 8, 9
-        return 48 <= character && character < 58;
-    }
-    private boolean characterIsDigit() {
-        return characterIsDigit(currentChar);
-    }
-    private boolean characterIsBinaryDigit(char character) {
-        return character == '0' || character == '1';
-    }
-    private boolean characterIsHexDigit(char character) {
-        if (characterIsDigit(character))
-            return true;
-        final char upperCase = Character.toUpperCase(character);
-        return 65 <= upperCase && upperCase < 71;
-    }
-    private boolean characterIsHexDigit() {
-        return characterIsHexDigit(currentChar);
-    }
-    private boolean characterIsLetter(char character) {
-        // character = a, ..., z OR character = A, ..., Z
-        return (65 <= character && character < 91) || (97 <= character && character < 123);
-    }
-    private boolean characterIsLetter() {
-        return characterIsLetter(currentChar);
-    }
-    private boolean characterIsSemicolon(char character) {
-        return character == ';';
-    }
-    private boolean characterIsSemicolon() {
-        return characterIsSemicolon(currentChar);
-    }
-    private boolean characterIsSeparator(char character) {
-        return character == ';' || character == '.' || character == ',' || characterIsBracket(character);
-    }
-    private boolean characterIsSeparator() {
-        return characterIsSeparator(currentChar);
-    }
-
-    public List<Token> lexJava(String filePath) {
-        this.path = filePath;
-
-        final Scanner scanner;
-        try {
-            scanner = new Scanner(new File(filePath));
-        } catch (FileNotFoundException e) {
-            System.err.println("File not found.");
-            System.exit(1);
-            return null;
-        }
-
-        ArrayList<Token> tokens = new ArrayList<>();
-
-        boolean inBlockComment = false;
-        for (line = 1; scanner.hasNextLine(); ++line) {
-            currentLine = scanner.nextLine();
-
-            startLine();
-            nextChar();
-
-            if (inBlockComment) {
-                char prevChar = currentChar;
-                while (nextChar()) {
-                    if (prevChar == '*' && currentChar == '/') {
-                        inBlockComment = false;
-                        nextChar();
-                        break;
-                    }
-                    prevChar = currentChar;
-                }
-
-                if (inBlockComment) {
-                    // We are still in the block comment. Go to the next line. Else, keep reading this line as normal.
-                    continue;
-                }
-            }
-
-            while (currentIndex < currentLine.length()) {
-                if (characterIsWhitespace()) {
-                    nextChar();
-                    continue;
-                }
-
-                column = currentIndex + 1;
-
-                // Check if this is the start of a comment
-                boolean inLineComment = false;
-                if (currentChar == '/' && hasNextChar) {
-                    switch (lookAhead) {
-                        case '/':
-                            inLineComment  = true;
-                            break;
-                        case '*':
-                            inBlockComment = true;
-                            break;
-                    }
-                }
-                // If we are in a line comment, skip to the next line.
-                if (inLineComment) {
-                    break;
-                }
-
-                // If we are in a block comment, see if the block ends on this line.
-                if (inBlockComment) {
-                    // currentChar points to the / of the /*, so advance twice to see what's next.
-                    nextChar();
-                    nextChar();
-                    char prevChar = currentChar;
-                    while (nextChar()) {
-                        if (prevChar == '*' && currentChar == '/') {
-                            inBlockComment = false;
-                            break;
-                        }
-                        prevChar = currentChar;
-                    }
-                    break;
-                }
-
-                // We are guaranteed to be at the start of a symbol here
-                if (currentChar == ';') {
-                    tokens.add(new Token(TokenType.SEMICOLON, Terminal.SEMICOLON, ";", line, column));
-                    nextChar();
-                } else if (characterIsBracket()) {
-                    tokens.add(new Token(TokenType.BRACKET, TERMINALS.get(Character.toString(currentChar)), Character.toString(currentChar), line, column));
-                    nextChar();
-                } else if (currentChar == '.') {
-                    if (characterIsDigit(lookAhead)) {
-                        //tokens.add(readDecimalLiteral());
-                    } else {
-                        tokens.add(new Token(TokenType.OPERATOR, Terminal.DOT, ".", line, column));
-                    }
-                    nextChar();
-                } else if (characterIsLetter() || characterIsDSU()) {
-                    tokens.add(readIdentifierOrKeyWord());
-                } else if (characterIsDigit()) {
-                    tokens.add(readNumericLiteral());
-                } else if (currentChar == '\'' || currentChar == '"') {
-                    tokens.add(readCharacterLiteralOrStringLiteral());
-                    nextChar();
-                } else {
-                    tokens.add(readOther());
-                }
-            }
-        }
-
-        return tokens;
-    }
-
-    public Token readNumericLiteral() {
-        StringBuilder stringBuilder = new StringBuilder();
-
-        boolean foundDecimal = false;
-        do {
-            if (currentChar == '.') {
-                if (foundDecimal) {
-                    // TODO - error
-                } else {
-                    foundDecimal = true;
-                }
-            } else if (!Character.isDigit(currentChar)) {
-                break;
-            }
-            stringBuilder.append(currentChar);
-        } while (nextChar());
-
-        return new Token(TokenType.NUMERIC_LITERAL, Terminal.FLOATING_POINT_LITERAL, stringBuilder.toString(), line, column);
-    }
-
-    private Token readOther() {
-        // Identify the symbol
-        // O(n) for invalid symbol, O(n*k) for valid symbol
-        // where n is terminals.size() and k is the length of the valid symbol
-        // note that k is never more than 4 and n is < 100 (generally)
-
-        LinkedList<String> possibleSymbols = new LinkedList<>();
-        for (String symbol : TERMINALS.keySet()) {
-            if (symbol.charAt(0) == currentChar) {
-                possibleSymbols.add(symbol);
-            }
-        }
-
-        if (possibleSymbols.size() == 0) {
-            error("Unexpected symbol.");
-        }
-
-        StringBuilder stringBuilder = new StringBuilder().append(currentChar);
-        int n = 1;
-        while (nextChar()) {
-
-            ListIterator<String> itr = possibleSymbols.listIterator();
-            while (itr.hasNext()){
-                final String token = itr.next();
-                if (token.length() <= n || token.charAt(n) != currentChar) {
-                    itr.remove();
-                }
-            }
-
-            ++n;
-            if (possibleSymbols.size() > 0) {
-                stringBuilder.append(currentChar);
-            } else {
-                break;
-            }
-        }
-
-        Terminal value = TERMINALS.get(stringBuilder.toString());
-        if (value == null) {
-            error("Unexpected symbol " + currentChar);
-        }
-
-        return new Token(TokenType.OPERATOR, value, stringBuilder.toString(), line, column);
-    }
-
-    private Token readCharacterLiteralOrStringLiteral() {
-        final boolean isString = currentChar == '"';
-        final char marker = currentChar;
-        boolean canClose = true, reachedLineEnd = true;
-        StringBuilder stringBuilder = new StringBuilder();
-        while (nextChar()) {
-            if (canClose && currentChar == marker) {
-                reachedLineEnd = false;
-                break;
-            }
-            stringBuilder.append(currentChar);
-            canClose = !canClose || currentChar != '\\';
-        }
-        if (reachedLineEnd) {
-            if (isString) {
-                error("Unclosed string literal.");
-            } else {
-                error("Unclosed character literal.");
-            }
-        }
-        if (isString) {
-            return new Token(TokenType.STRING_LITERAL, Terminal.STRING_LITERAL, stringBuilder.toString(), line, column);
-        } else {
-            return new Token(TokenType.CHARACTER_LITERAL, Terminal.CHARACTER_LITERAL, stringBuilder.toString(), line, column);
-        }
-    }
-    private Token readIdentifierOrKeyWord() {
-        /* Identifier or keyword. Starts with letter, $, or _, then continues with letter, digit, $, or _.
-         * Accept the current character, then accept all characters until a character that is not a letter,
-         * digit, $, or _ is encountered, or until the line ends. (Note that the end of the line is not
-         * marked by a linebreak if and only if it is the last line of the file. Also note that a keyword
-         * will never contain a digit, $, or _, but this distinction is not implemented.) */
-
-        StringBuilder stringBuilder = new StringBuilder();
-        do {
-            stringBuilder.append(currentChar);
-        } while (nextChar() && (characterIsLetter() || characterIsDigit() || characterIsDSU()));
-
-
-        Terminal terminalValue = TERMINALS.get(stringBuilder.toString());
-
-        if (terminalValue == null) {
-            return new Token(TokenType.IDENTIFIER, Terminal.IDENTIFIER, stringBuilder.toString(), line, column);
-        } else {
-            return new Token(TokenType.KEYWORD, terminalValue, stringBuilder.toString(), line, column);
-        }
-    }
+	private void step1(String fileName) throws IOException {
+		BufferedReader reader = new BufferedReader(new FileReader(fileName));
+		StringBuilder newIn = new StringBuilder();
+		int num;
+		while ((num = reader.read()) != -1) {
+			newIn.append((char) num);
+		}
+		in = newIn.toString();
+	}
+	private void step2() {
+		StringBuilder newIn = new StringBuilder(in.length());
+		start();
+		boolean backslash = false;
+		while (lexing) {
+			if (!backslash && earlyUnicodeEscape()) {
+				// currentString is unicode escape backslash
+				newIn.append((char) Integer.parseInt(currentString.substring(2), 16));
+				currentString.setLength(0);
+			} else {
+				if (currentChar == '\\') {
+					backslash = !backslash;
+				}
+				newIn.append(currentChar);
+				advance();
+			}
+		}
+		in = newIn.toString();
+	}
+	private void step3() {
+		StringBuilder newIn = new StringBuilder();
+		start();
+		while (lexing) {
+			if (earlyLineTerminator()) {
+				newIn.append('\n');
+			} else {
+				newIn.append(currentChar);
+				advance();
+			}
+		}
+		in = newIn.toString();
+	}
+	private void step4() {
+		start();
+		input();
+	}
 
 
 
-    private void error(String message) {
-        System.err.println(path + ":" + line + ":" + column + "\n" + message);
-        System.exit(1);
-    }
+	private boolean earlyUnicodeEscape() {
+		/* unicode escape = "\" , unicode marker , hex digit , hex digit , hex digit , hex digit ; */
+		return accept(() -> {
+			boolean accepted = accept('\\') && unicodeMarker();
+			if (accepted) {
+				accepted = hexDigit() && hexDigit() && hexDigit() && hexDigit();
+				if (!accepted) {
+					error("illegal unicode escape");
+				}
+			}
+			return accepted;
+		});
+	}
+	private boolean unicodeMarker() {
+		/* unicode marker = "u" , { "u" } ; */
+		final boolean accepted = accept('u');
+		if (accepted) {
+			acceptRepeating('u');
+		}
+		return accepted;
+	}
+	private boolean hexDigit() {
+		/* hex digit = "0" | "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9"
+		 *           | "a" | "b" | "c" | "d" | "e" | "f"
+		 *           | "A" | "B" | "C" | "D" | "E" | "F" ; */
+		return acceptAnyInRange('0', '9') || acceptAnyInRange('a', 'f') || acceptAnyInRange('A', 'F');
+	}
+	private boolean rawInputCharacter() {
+		/* raw input character = ? any Unicode character ? ; */
+		return acceptAppendAdvance(true);
+	}
+
+
+	private boolean earlyLineTerminator() {
+		/* line terminator = LF
+		 *                 | CR
+		 *                 | CR , LF ; */
+		return accept(TextConstants.CR) | accept(TextConstants.LF);
+	}
+	private boolean lineTerminator() {
+		final boolean accepted = accept('\n');
+		if (accepted) {
+			line++;
+			column = 1;
+		}
+		return accepted;
+	}
+	private boolean inputCharacter() {
+		/* input character = unicode input character - ( CR | LF ) ; */
+		/* unicode input character = unicode escape | raw input character ; */
+		return excepting(this::rawInputCharacter, TextConstants.CR, TextConstants.LF);
+	}
+
+
+
+	private void input() {
+		/* input = { input element } , [ sub ] ;
+		 * sub = SUB ; */
+		acceptRepeating(this::inputElement);
+		accept(TextConstants.SUB);
+		if (lexing)
+			error("unexpected symbol");
+	}
+	private boolean inputElement() {
+		/* input element = white space | comment | token ; */
+		currentString.setLength(0);
+		return whiteSpace() || comment() || token();
+	}
+	private boolean token() {
+		/* token = identifier | keyword | literal | separator | operator ; */
+
+		/* literal = integer literal | floating point literal | boolean literal
+		 *         | character literal | string literal | null literal ; */
+
+		/* token = identifier
+		 *       | keyword
+		 *       | boolean literal
+		 *       | null literal
+		 *       | separator
+		 *       | operator ; */
+
+		return keyword() || booleanLiteral() || nullLiteral() || identifier() || floatingPointLiteral()
+				|| integerLiteral() || characterLiteral() || stringLiteral() || separator() || operator();
+	}
+
+
+
+	private boolean whiteSpace() {
+		/* white space = SP | HT | FF | line terminator ; */
+		return accept(TextConstants.SP) || accept(TextConstants.HT) || accept(TextConstants.FF) || lineTerminator();
+	}
+
+
+
+	private boolean comment() {
+		/* comment = traditional comment | end of line comment ;
+		 * traditional comment = "/" , "*" , comment tail ;
+		 * end of line comment = "/" , "/" , { input character } ;
+		 *
+		 * comment = "/" , ( ( "*" , comment tail ) | ( "/" , { input character } ) ; */
+
+		return accept(() -> {
+			boolean accepted = accept('/');
+			if (accepted) {
+				if (accept('*')) {
+					accepted = commentTail();
+				} else if (accept('/')) {
+					// accepted = true; (redundant)
+					acceptRepeating(this::inputCharacter);
+				}
+			}
+			return accepted;
+		});
+	}
+	private boolean commentTail() {
+		/* comment tail = "*" , comment tail star
+		 *              | not star , comment tail ;
+		 * not star = input character - "*"
+		 *          | line terminator ;
+		 *
+		 * comment tail = "*" , comment tail star
+		 *              | ( input character - "*" ) , comment tail
+		 *              | line terminator , comment tail ; */
+
+
+		/* unicode input character = unicode escape | raw input character ; */
+
+		return accept('*') ? commentTailStar() : (lineTerminator() || rawInputCharacter()) && commentTail();
+	}
+	private boolean commentTailStar() {
+		/* comment tail star = "/"
+		 *                   | "*" , comment tail star
+		 *                   | not star not slash , comment tail ;
+		 * not star not slash = input character - ( "*" | "/" )
+		 *                    | line terminator ;
+		 *
+		 * comment tail star = "/"
+		 *                   | "*" , comment tail star
+		 *                   | ( input character - ( "*" | "/" ) ) , comment tail
+		 *                   | line terminator , comment tail ; */
+		return accept('/') || (accept('*') ? commentTailStar() : (lineTerminator() || rawInputCharacter()) && commentTail());
+	}
+
+
+
+	private boolean identifier() {
+		/* identifier = identifier chars - ( keyword | boolean literal | null literal ) ;
+		 * identifier chars = java letter , { java letter or digit } ;
+		 * java letter = ? any Unicode character for which Character.isJavaIdentifierStart(int) returns true ? ;
+		 * java letter or digit = ? any Unicode character for which Character.isJavaIdentifierPart(int) returns true ? ; */
+		final boolean accepted = acceptAppendAdvance(Character.isJavaIdentifierStart(currentChar));
+		if (accepted) {
+			acceptRepeating(() -> acceptAppendAdvance(Character.isJavaIdentifierPart(currentChar)));
+			newToken(TokenType.IDENTIFIER, Terminal.IDENTIFIER);
+		}
+		return accepted;
+	}
+
+	private boolean keyword() {
+		return acceptNonIdentifierTerminal(TokenType.KEYWORD, TextConstants.KEYWORDS, false);
+	}
+	private boolean booleanLiteral() {
+		return acceptNonIdentifierTerminal(TokenType.BOOLEAN_LITERAL, TextConstants.BOOLEAN_LITERALS, false);
+	}
+	private boolean nullLiteral() {
+		return acceptNonIdentifierTerminal(TokenType.NULL_LITERAL, TextConstants.NULL_LITERAL, false);
+	}
+	private boolean separator() {
+		return acceptNonIdentifierTerminal(TokenType.SEPARATOR, TextConstants.SEPARATORS, true);
+	}
+	private boolean operator() {
+		return acceptNonIdentifierTerminal(TokenType.OPERATOR, TextConstants.OPERATORS, true);
+	}
+
+
+	private boolean integerLiteral() {
+		/* integer literal = decimal integer literal | hex integer literal
+		 *                 | octal integer literal | binary integer literal ;
+		 * decimal integer literal = decimal numeral , [ integer type suffix ] ;
+		 * hex integer literal = hex numeral , [ integer type suffix ] ;
+		 * octal integer literal = octal numeral , [ integer type suffix ] ;
+		 * binary integer literal = binary numeral , [ integer type suffix ] ;
+		 * integer type suffix = "l" | "L" ; */
+		/* integer literal = decimal numeral , [ integer type suffix ]
+		 *                 | hex numeral , [ integer type suffix ]
+		 *                 | octal numeral , [ integer type suffix ]
+		 *                 | binary numeral , [ integer type suffix ] ; */
+		/* integer literal = ( decimal numeral | hex numeral | octal numeral | binary numeral ) , [ "l" | "L" ] ; */
+
+		if ((hexNumeral() || octalNumeral() || binaryNumeral() || decimalNumeral())) {
+			acceptAny('l', 'L');
+			newToken(TokenType.INTEGER_LITERAL, Terminal.INTEGER_LITERAL);
+			return true;
+		} else {
+			return false;
+		}
+	}
+
+	private boolean decimalNumeral() {
+		/* decimal numeral = "0"
+		 *                 | non zero digit , [ digits ]
+		 *                 | non zero digit , underscores , digits ;
+		 * non zero digit = "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9" ; */
+		return accept(() -> {
+			if (accept('0')) {
+				return true;
+			} else if (acceptAnyInRange('1', '9')) {
+				if (digits()) {
+					return true;
+				} else if (underscores()) {
+					return digits();
+				} else {
+					return true;
+				}
+			} else {
+				return false;
+			}
+		});
+	}
+	private boolean digits() {
+		/* digits = digit
+		 *        | digit , [ digits and underscores ] , digit ;
+		 * digits and underscores = digit or underscore , { digit or underscore } ;
+		 * digit or underscore = digit | "_" ;
+		 *
+		 * digit = "0" | non zero digit ;
+		 * non zero digit = "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9" ; */
+
+
+		/* digits = digit
+		 *        | digit , digit
+		 *        | digit , digit, { digit | "_" } , digit
+		 *        | digit , "_" , { digit | "_" } , digit
+		 * */
+
+		return digitsOfAnyBase(() -> acceptAnyInRange('0', '9'));
+	}
+	private boolean underscores() {
+		/* underscores = "_" , { "_" } ; */
+		final boolean accepted = accept('_');
+		if (accepted)
+			acceptRepeating('_');
+		return accepted;
+	}
+
+	private boolean hexNumeral() {
+		/* hex numeral = "0" , "x" , hex digits
+		 *             | "0" , "X" , hex digits ; */
+
+		return accept(() -> accept('0') && acceptAny('x', 'X') && hexDigits());
+	}
+	private boolean hexDigits() {
+		/* hex digits = hex digit
+		 *            | hex digit , [ hex digits and underscores ] , hex digit ;
+		 * hex digits and underscores = hex digit or underscore , { hex digit or underscore } ;
+		 * hex digit or underscore = hex digit | "_" ; */
+
+		/* hex digits = hex digit
+		 *            | hex digit , hex digit
+		 *            | hex digit , hex digit , { hex digit | "_" } , hex digit
+		 *            | hex digit , "_" , { hex digit | "_" } , hex digit ; */
+
+		return digitsOfAnyBase(this::hexDigit);
+	}
+
+	private boolean octalNumeral() {
+		/* octal numeral = "0" , octal digits
+		 *               | "0" , underscores , octal digits ; */
+		return accept(() -> {
+			if (accept('0')) {
+				underscores();
+				return octalDigits();
+			} else {
+				return false;
+			}
+		});
+	}
+	private boolean octalDigits() {
+		/* octal digits = octal digit
+		 *              | octal digit , [ octal digits and underscores ] , octal digit ;
+		 * octal digits and underscores = octal digit or underscore , { octal digit or underscore } ;
+		 * octal digit or underscore = octal digit | "_" ; */
+
+		/* octal digits = octal digit
+		 *              | octal digit , octal digit ;
+		 *              | octal digit , octal digit , { octal digit | "_" } , octal digit ;
+		 *              | octal digit , "_" , { octal digit | "_" } , octal digit ; */
+		return digitsOfAnyBase(this::octalDigit);
+	}
+	private boolean octalDigit() {
+		/* octal digit = "0" | "1" | "2" | "3" | "4" | "5" | "6" | "7" ; */
+		return acceptAnyInRange('0', '7');
+	}
+
+	private boolean binaryNumeral() {
+		/* binary numeral = "0" , "b" , binary digits
+		 *                | "0" , "B" , binary digits ;
+		 * binary digits = binary digit
+		 *               | binary digit , [ binary digits and underscores ] , binary digit ;
+		 * binary digit = "0" | "1" ; */
+		return accept(() -> accept('0') && acceptAny('b', 'B') && digitsOfAnyBase(() -> acceptAny('0', '1')));
+	}
+
+
+	private boolean floatingPointLiteral() {
+		/* floating point literal = decimal floating point literal | hexadecimal floating point literal ; */
+		final boolean accepted = decimalFloatingPointLiteral() || hexadecimalFloatingPointLiteral();
+		if (accepted)
+			newToken(TokenType.FLOATING_POINT_LITERAL, Terminal.FLOATING_POINT_LITERAL);
+		return accepted;
+	}
+	private boolean decimalFloatingPointLiteral() {
+		/* decimal floating point literal = digits , "." , [ digits ] , [ exponent part ] , [ float type suffix ]
+		 *                                | "." , digits , [ exponent part ] , [ float type suffix ]
+		 *                                | digits , exponent part , [ float type suffix ]
+		 *                                | digits , [ exponent part ] , float type suffix ; */
+
+		/* decimal floating point literal = digits , "."
+		 *                                | digits , "." , float type suffix
+		 *                                | digits , "." , exponent part
+		 *                                | digits , "." , exponent part , float type suffix
+		 *                                | digits , "." , digits
+		 *                                | digits , "." , digits , float type suffix
+		 *                                | digits , "." , digits , exponent part
+		 *                                | digits , "." , digits , exponent part , float type suffix
+		 *                                | digits , exponent part
+		 *                                | digits , exponent part , float type suffix
+		 *                                | digits , float type suffix
+		 *                                | "." , digits
+		 *                                | "." , digits , float type suffix
+		 *                                | "." , digits , exponent part
+		 *                                | "." , digits , exponent part , float type suffix ; */
+
+		return accept(() -> {
+			if (digits()) {
+				if (accept('.')) {
+					digits();
+					exponentPart();
+					floatTypeSuffix();
+					return true;
+				} else {
+					return exponentPart() | floatTypeSuffix();
+				}
+			} else if (accept('.')) {
+				if (digits()) {
+					exponentPart();
+					floatTypeSuffix();
+					return true;
+				} else {
+					return false;
+				}
+			} else {
+				return false;
+			}
+		});
+	}
+	private boolean exponentPart() {
+		/* exponent part = exponent indicator , signed integer ;
+		 * exponent indicator = "e" | "E" ;
+		 *
+		 * exponent part = ( "e" | "E" ) , signed integer ; */
+		return accept(() -> acceptAny('e', 'E') && signedInteger());
+	}
+	private boolean signedInteger() {
+		/* signed integer = [ sign ] , digits ;
+		 * sign = "+" | "-" ;
+		 *
+		 * signed integer = [ "+" | "-" ] , digits ; */
+		return accept(() -> {
+			acceptAny('+', '-');
+			return digits();
+		});
+	}
+	private boolean floatTypeSuffix() {
+		/* float type suffix = "f" | "F" | "d" | "D" ; */
+		return acceptAny('f', 'F', 'd', 'D');
+	}
+
+	private boolean hexadecimalFloatingPointLiteral() {
+		/* hexadecimal floating point literal = hex significand , binary exponent , [ float type suffix ] ;
+		 * hex significand = hex numeral , [ "." ]
+		 *                 | "0" , ( "x" | "X" ) , [ hex digits ] , "." , hex digits ;
+		 * binary exponent = binary exponent indicator , signed integer ;
+		 * binary exponent indicator = "p" | "P" ;
+		 * hex numeral = "0" , "x" , hex digits
+		 *             | "0" , "X" , hex digits ; */
+
+
+		/* hexadecimal floating point literal = "0" , ( "x" | "X" ) , ( ( hex digits , [ "." ] )
+		                                                              | ( [ hex digits ] , "." , hex digits ) )
+		                                      , ( "p" | "P" ) , signed integer
+		                                      , [ float type suffix ] ; */
+
+
+		/* A =  ;
+		 * hexadecimal floating point literal = "0" , ( "x" | "X" ) , ( hex digits
+		 *                                                            | hex digits , "."
+		 *                                                            | hex digits , "." , hex digits )
+		 *                                                            | "." , hex digits
+		 *                                          , ( "p" | "P" ) , signed integer , [ float type suffix ] ; */
+
+		return accept(() -> {
+			if (!(accept('0') && acceptAny('x', 'X') && hexDigits()))
+				return false;
+			if (accept('.'))
+				hexDigits();
+			if (!(acceptAny('p', 'P') && signedInteger()))
+				return false;
+			floatTypeSuffix();
+			return true;
+		});
+	}
+
+	private boolean characterLiteral() {
+		/* character literal = "'" , single character , "'"
+		 *                   | "'" , escape sequence , "'" ;
+		 * (* It is a compile-time error for the character following the single character or escape sequence to be other than a '. *)
+		 * (* It is a compile-time error for a line terminator to appear after the opening ' and before the closing matching '. *)
+		 *
+		 * single character = input character - ( "'" | "\" ) ; */
+
+		final boolean accepted = accept(() -> {
+			if (!accept('\''))
+				return false;
+			else if (!lexing || lineTerminator())
+				return error("unclosed character literal");
+			else if (accept('\''))
+				return error("empty character literal");
+			else if (!(escapeSequence() || rawInputCharacter()))
+				return false; // This cannot happen.
+			else if (!lexing || lineTerminator())
+				return error("unclosed character literal");
+			else if (!accept('\''))
+				return error("too many characters in character literal");
+			else return true;
+		});
+		if (accepted)
+			newToken(TokenType.CHARACTER_LITERAL, Terminal.CHARACTER_LITERAL);
+		return accepted;
+	}
+
+	private boolean stringLiteral() {
+		/* string literal = '"' , { string character } , '"' ;
+		 * (* It is a compile-time error for a line terminator to appear after the opening " and before the closing matching ". *)
+		 *
+		 * string character = input character - ( '"' | '\' )
+		 *                  | escape sequence ; */
+
+		final boolean accepted = accept(() -> {
+			if (!accept('"'))
+				return false;
+			while (true)
+				if (!lexing || lineTerminator())
+					return error("unclosed string literal");
+				else if (accept('"'))
+					break;
+				else if (!(escapeSequence() || rawInputCharacter()))
+					return false; // This cannot happen.
+			return true;
+		});
+		if (accepted)
+			newToken(TokenType.STRING_LITERAL, Terminal.STRING_LITERAL);
+		return accepted;
+	}
+
+	private boolean escapeSequence() {
+		/* escape sequence = "\" , "b" (* backspace BS, \u0008 *)
+		 *                 | "\" , "t" (* horizontal tab HT, \u0009 *)
+		 *                 | "\" , "n" (* linefeed LF, \u000a *)
+		 *                 | "\" , "f" (* form feed FF, \u000C *)
+		 *                 | "\" , "r" (* carriage return CR, \u000D *)
+		 *                 | "\" , '"' (* double quote ", \u0022 *)
+		 *                 | "\" , "'" (* single quote ', \u0027 *)
+		 *                 | "\" , "\" (* backslash \, \u005C *)
+		 *                 | octal escape ;
+		 * octal escape = "\" , octal digit
+		 *              | "\" , octal digit , octal digit
+		 *              | "\" , zero to three , octal digit , octal digit ;
+		 * (* It is a compile-time error if the character following a backslash in an escape sequence is not an ASCII
+		 *    b, t, n, f, r, ", ', \, 0, 1, 2, 3, 4, 5, 6, or 7. The Unicode escape u is processed earlier. *) */
+
+		/* octal escape = "\" , octal digit
+		 *              | "\" , octal digit , octal digit
+		 *              | "\" , zero to three , octal digit , octal digit ; */
+
+		return accept(() -> {
+			if (!accept('\\'))
+				return false;
+			if (acceptAny('b', 't', 'n', 'f', 'r', '"', '\'', '\\')) {
+				return true;
+			} else if (acceptAnyInRange('0', '3')) {
+				if (octalDigit())
+					octalDigit();
+				return true;
+			} else if (acceptAnyInRange('4', '7')) {
+				octalDigit();
+				return true;
+			} else {
+				return error("illegal escape character");
+			}
+		});
+	}
+
+
+	private boolean digitsOfAnyBase(Acceptor digitAcceptor) {
+		/* digits of base n = digit of base n
+		 *                  | digit of base n , digit of base n ;
+		 *                  | digit of base n , digit of base n , { digit of base n | "_" } , digit of base n ;
+		 *                  | digit of base n , "_" , { digit of base n | "_" } , digit of base n ; */
+		return accept(() -> {
+			if (!digitAcceptor.accept())
+				return false;
+			boolean acceptedMore, endsWithDigit;
+			if (accept('_')) {
+				acceptedMore = true;
+				endsWithDigit = false;
+			} else if (digitAcceptor.accept()) {
+				acceptedMore = true;
+				endsWithDigit = true;
+			} else {
+				acceptedMore = false;
+				endsWithDigit = true;
+			}
+			while (acceptedMore) {
+				if (accept('_')) {
+					endsWithDigit = false;
+				} else if (digitAcceptor.accept()) {
+					endsWithDigit = true;
+				} else {
+					acceptedMore = false;
+				}
+			}
+			if (!endsWithDigit)
+				error("illegal underscore");
+			return endsWithDigit;
+		});
+	}
+	private boolean acceptNonIdentifierTerminal(TokenType tokenType, HashMap<String, Terminal> hashMap, boolean allowSymbols) {
+		final boolean wasLexing = lexing;
+		final char oldCurrentChar = currentChar;
+		final int oldCurrentIndex = currentIndex;
+		final int oldLine = line, oldColumn = column;
+		final StringBuilder oldCurrentString = currentString;
+
+		boolean isLexingAtBest = lexing;
+		char currentCharAtBest = currentChar;
+		int currentIndexAtBest = currentIndex;
+
+		int lineAtBest = line, columnAtBest = column;
+
+		currentString = new StringBuilder();
+
+		String best = null;
+		for (String key : hashMap.keySet()) {
+			if (best == null || best.length() < key.length()) {
+				boolean accepted = true;
+				for (int i = 0; i < key.length(); ++i) {
+					if (!accept(key.charAt(i))) {
+						accepted = false;
+						break;
+					}
+				}
+				if (accepted) {
+					best = key;
+					isLexingAtBest = lexing;
+					currentCharAtBest = currentChar;
+					currentIndexAtBest = currentIndex;
+					lineAtBest = line;
+					columnAtBest = column;
+				}
+			}
+			lexing = wasLexing;
+			currentChar = oldCurrentChar;
+			currentIndex = oldCurrentIndex;
+			line = oldLine;
+			column = oldColumn;
+			currentString.setLength(0);
+		}
+
+		final boolean accepted = best != null && (allowSymbols || !isLexingAtBest || !Character.isJavaIdentifierStart(currentCharAtBest));
+		if (accepted) {
+			lexing = isLexingAtBest;
+			currentChar = currentCharAtBest;
+			currentIndex = currentIndexAtBest;
+			line = lineAtBest;
+			column = columnAtBest;
+			currentString = oldCurrentString.append(best);
+			newToken(tokenType, hashMap.get(currentString.toString()));
+		}
+		return accepted;
+	}
+
+
+	private interface Acceptor { boolean accept(); }
+
+	private boolean accept(Acceptor acceptor) {
+
+		final boolean wasLexing = lexing;
+		final char oldCurrentChar = currentChar;
+		final int oldCurrentIndex = currentIndex, oldCurrentStringLength = currentString.length();
+		final int oldLine = line, oldColumn = column;
+
+		final boolean accepted = acceptor.accept();
+		if (!accepted) {
+			lexing = wasLexing;
+			currentChar = oldCurrentChar;
+			currentIndex = oldCurrentIndex;
+			line = oldLine;
+			column = oldColumn;
+			currentString.setLength(oldCurrentStringLength);
+		}
+		return accepted;
+	}
+	private boolean accept(char value) {
+		return acceptAppendAdvance(currentChar == value);
+	}
+	private void acceptRepeating(Acceptor acceptor) {
+		while (true) {
+			if (!accept(acceptor)) {
+				break;
+			}
+		}
+	}
+	private void acceptRepeating(char value) {
+		while (true) {
+			if (!accept(value)) {
+				break;
+			}
+		}
+	}
+	private boolean excepting(Acceptor acceptor, char... exceptions) {
+		return accept(() -> {
+			for (char exception : exceptions)
+				if (accept(exception)) return false;
+			return acceptor.accept();
+		});
+	}
+	private boolean acceptAny(char... values) {
+		for (char value : values)
+			if (accept(value)) return true;
+		return false;
+	}
+	private boolean acceptAnyInRange(char min, char max) {
+		return acceptAppendAdvance(min <= currentChar && currentChar <= max);
+	}
+
+
+	private boolean error(String message) {
+		System.err.println("ERROR AT LINE " + line + " COLUMN " + column + "\n" + message);
+		Thread.currentThread().interrupt();
+		System.exit(1);
+		return false;
+	}
+	private void start() {
+		line = column = 1;
+		tokens = new ArrayList<>();
+		currentIndex = -1;
+		currentString.setLength(0);
+		advance();
+	}
+	private void advance() {
+		lexing = currentIndex < in.length() - 1;
+		if (lexing) {
+			currentIndex++;
+			column++;
+			currentChar = in.charAt(currentIndex);
+		} else {
+			currentChar = 0;
+		}
+	}
+	private boolean acceptAppendAdvance(boolean accepted) {
+		if (accepted &= lexing) {
+			currentString.append(currentChar);
+			advance();
+		}
+		return accepted;
+	}
+	private void newToken(TokenType type, Terminal value) {
+		tokens.add(new Token(type, value, currentString.toString(), line, column));
+	}
 }

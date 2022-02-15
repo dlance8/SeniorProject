@@ -1,0 +1,16 @@
+identifier = identifier chars - ( keyword | boolean literal | null literal ) ;
+identifier chars = java letter , { java letter or digit } ;
+java letter = ? any Unicode character that is a "Java letter" ? ;
+java letter or digit = ? any Unicode character that is a java letter-or-digit ? ;
+literal = integer literal
+        | floating point literal
+        | boolean literal
+        | character literal
+        | string literal
+        | null literal ;
+
+type = primitive type
+     | reference type ;
+primitive type = { annotation } , numeric type
+               | { annotation } , "boolean" ;
+numeric type = integral type | floating point type ;

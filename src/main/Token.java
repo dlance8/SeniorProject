@@ -1,5 +1,4 @@
 package main;
-
 /**
  * The main.Token class represents an individual lexeme and is capable of representing identifiers, keywords,
  * operators and reserved words. The token class is used by the lexer and called whenever the lexer
@@ -33,7 +32,13 @@ public class Token {
 	public String toString() {
 		return type.toString() + "\n\t" + value.toString() + "\n\tLine " + line + ", Col " + col + "\n\t" + text;
 	}
-
+	public boolean equals(Token that) {
+		return this.col == that.col
+			&& this.line == that.line
+			&& this.value == that.value
+			&& this.type == that.type
+			&& this.text.equals(that.text);
+	}
 	public int getCol() {
 		return col;
 	}

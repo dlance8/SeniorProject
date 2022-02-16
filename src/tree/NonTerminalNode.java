@@ -51,8 +51,19 @@ public class NonTerminalNode implements TreeNode {
 
 	@Override
 	public String valueString() {
-		//return NONTERMINAL_STRINGS.get(value);
-		return value.toString();
+		final String original = value.toString();
+		StringBuilder stringBuilder = new StringBuilder();
+		boolean capitalize = false;
+		for (int i = 0; i < original.length(); ++i) {
+			final char c = original.charAt(i);
+			if (c == '_') {
+				capitalize = true;
+			} else {
+				stringBuilder.append(capitalize || i == 0 ? c : Character.toLowerCase(c));
+				capitalize = false;
+			}
+		}
+		return stringBuilder.toString();
 	}
 
 	@Override

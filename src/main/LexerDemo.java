@@ -1,20 +1,56 @@
 package main;
+import javafx.application.Application;
+import javafx.scene.Group;
+import javafx.scene.Scene;
+import javafx.scene.control.TreeView;
+import javafx.stage.Stage;
+import tree.TreeNode;
 import java.io.IOException;
-import java.util.List;
+import java.util.ArrayList;
 public class LexerDemo {
 	public static void main(String[] args) throws IOException {
-		final long startTime = System.nanoTime();
-		List<Token> tokens = new Lexer().lex("in/String.java");
-		final long stopTime = System.nanoTime();
-		demo2(tokens);
-		System.out.println((stopTime - startTime) / 1e6 + "ms");
+//		final long startTime = System.nanoTime();
+//		ArrayList<Token> tokens = new Lexer().lex("in/String.java");
+//		final long stopTime = System.nanoTime();
+//		demo2(tokens);
+//		System.out.println((stopTime - startTime) / 1e6 + "ms");
+
+		ArrayList<Token> tokens ;
 	}
-	private static void demo1(List<Token> tokens) {
+
+	public static class OtherDemo extends Application {
+		public static void main(String[] args) {
+			launch(args);
+		}
+		@Override
+		public void start(Stage primaryStage) {
+			ArrayList<Token> tokens;
+			try {
+				tokens = new Lexer().lex("in/MyClass.java");
+			} catch (IOException e) {
+				return;
+			}
+			ParserV1 parser = new ParserV1(tokens);
+			TreeNode tree = parser.parse();
+			System.out.println(tree);
+
+			TreeView<String> treeView = new TreeView<>(parser.debugRoot);
+			primaryStage.setScene(new Scene(new Group(treeView), 900, 900));
+
+
+			treeView.prefWidthProperty().bind(primaryStage.widthProperty());
+			treeView.prefHeightProperty().bind(primaryStage.heightProperty());
+
+			primaryStage.show();
+		}
+	}
+
+	private static void demo1(ArrayList<Token> tokens) {
 		for (Token token : tokens) {
 			System.out.println(token);
 		}
 	}
-	private static void demo2(List<Token> tokens) {
+	private static void demo2(ArrayList<Token> tokens) {
 		if (tokens.size() == 0) return;
 
 		StringBuilder stringBuilder = new StringBuilder(), newLine = new StringBuilder().append('\n');

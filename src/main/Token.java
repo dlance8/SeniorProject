@@ -28,6 +28,13 @@ public class Token {
 		this.col = col;
 	}
 
+	public Token(Void nothing) {
+		col = line = -1;
+		value = null;
+		type = null;
+		text = null;
+	}
+
 	@Override
 	public String toString() {
 		return type.toString() + "\n\t" + value.toString() + "\n\tLine " + line + ", Col " + col + "\n\t" + text;

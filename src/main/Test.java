@@ -20,6 +20,27 @@ public class Test {
 //		System.out.println(stringBuilder);
 
 		new Test().parse("in/in.txt");
+
+//		java.util.Random r = new java.util.Random();
+//		double k = 2.0;
+//		double e0 = 8.854E-12;
+//		{
+//			double A = 2.32E-2;
+//			double[] d_ = {1E-3 * 1/3, 1E-3 * 2/3, 1E-3 * 3/3, 1E-3 * 4/3, 1E-3 * 5/3};
+//			for (double d : d_) {
+//				double C = k * e0 * A / d * (1 + 0.1 * r.nextGaussian());
+//				System.out.println((1./d) + "\n\t" + C);
+//			}
+//			System.out.println("\n");
+//		}
+//		{
+//			double[] A_ = {1.16E-2, 2.32E-2, 4.65E-2, 6.97E-2, 9.29E-2};
+//			double d = 1E-3 * 1 / 3;
+//			for (double A : A_) {
+//				double C = k * A / d * (1 + 0.1 * r.nextGaussian());
+//				System.out.println(A + "\n\t" + C);
+//			}
+//		}
 	}
 
 	private static final Collection<HashMap<String, Terminal>> ALL_MAPS = Arrays.asList(TextConstants.KEYWORDS, TextConstants.BOOLEAN_LITERALS, TextConstants.NULL_LITERAL, TextConstants.SEPARATORS, TextConstants.OPERATORS);
@@ -115,7 +136,7 @@ public class Test {
 	private boolean nextLine() {
 		do {
 			if (!file.hasNextLine()) return false;
-		} while ((line = file.nextLine()).length() <= 0);
+		} while ((line = file.nextLine().trim()).length() == 0);
 		return true;
 	}
 	private void x(String in, StringBuilder out, String add) {

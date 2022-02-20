@@ -1,10 +1,24 @@
 package main;
+import java.util.EnumSet;
 import java.util.HashMap;
 public final class TextConstants {
 	private TextConstants() {}
 	public static final char CR = 0x0A, FF = 0x0C, HT = 0x09, LF = 0x0D, SP = 0x20, SUB = 0x1A;
+
+	public static final EnumSet<Terminal> ASSIGNMENT_OPERATORS;
+	public static final EnumSet<TokenType> LITERAL_TYPES;
+
 	public static final HashMap<String, Terminal> BOOLEAN_LITERALS, NULL_LITERAL, KEYWORDS, SEPARATORS, OPERATORS;
+
 	static {
+		ASSIGNMENT_OPERATORS = EnumSet.of(Terminal.ASSIGN, Terminal.ASSIGN_MULTIPLY, Terminal.ASSIGN_DIVIDE,
+			Terminal.ASSIGN_MOD, Terminal.ASSIGN_ADD, Terminal.ASSIGN_SUBTRACT, Terminal.ASSIGN_LEFT_SHIFT,
+			Terminal.ASSIGN_RIGHT_SHIFT, Terminal.ASSIGN_UNSIGNED_RIGHT_SHIFT, Terminal.ASSIGN_AND, Terminal.ASSIGN_XOR,
+			Terminal.ASSIGN_OR);
+
+		LITERAL_TYPES = EnumSet.of(TokenType.INTEGER_LITERAL, TokenType.FLOATING_POINT_LITERAL,
+			TokenType.BOOLEAN_LITERAL, TokenType.CHARACTER_LITERAL, TokenType.STRING_LITERAL, TokenType.NULL_LITERAL);
+
 		BOOLEAN_LITERALS = new HashMap<>();
 		BOOLEAN_LITERALS.put("true",    Terminal.TRUE_LITERAL   );
 		BOOLEAN_LITERALS.put("false",   Terminal.FALSE_LITERAL  );

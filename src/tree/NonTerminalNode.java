@@ -84,6 +84,7 @@ public class NonTerminalNode implements TreeNode {
 
 	@Override
 	public String toString() {
+
 		StringBuilder full = new StringBuilder();
 		StringBuilder indent = new StringBuilder();
 

@@ -1,22 +1,22 @@
 package tree;
 
-import main.NonTerminal;
+import main.Nonterminal;
 
 import java.util.ArrayList;
 import java.util.EnumMap;
 import java.util.List;
 
-public class NonTerminalNode implements TreeNode {
+public class NonterminalNode implements TreeNode {
 	// only used for printing the tree, irrelevant to any scanning, parsing, or interpreting algorithm
 
-	private static final EnumMap<NonTerminal, String> NONTERMINAL_STRINGS = new EnumMap<>(NonTerminal.class);
+	private static final EnumMap<Nonterminal, String> NONTERMINAL_STRINGS = new EnumMap<>(Nonterminal.class);
 	static {
 
 	}
 
 	private final List<TreeNode> children = new ArrayList<>();
-	private final NonTerminal value;
-	public NonTerminalNode(NonTerminal value) {
+	private final Nonterminal value;
+	public NonterminalNode(Nonterminal value) {
 		this.value = value;
 	}
 
@@ -35,8 +35,8 @@ public class NonTerminalNode implements TreeNode {
 
 	// A shorthand for ((NonTerminalNode) getChildren().get(index)) when we KNOW children.get(index) exists and is of
 	// type NonTerminalNode
-	public NonTerminalNode getNonTerminalChild(int index) {
-		return (NonTerminalNode) children.get(index);
+	public NonterminalNode getNonTerminalChild(int index) {
+		return (NonterminalNode) children.get(index);
 	}
 
 	// A shorthand for ((TerminalNode) getChildren().get(index)) when we KNOW children.get(index) exists and is of
@@ -84,6 +84,7 @@ public class NonTerminalNode implements TreeNode {
 
 	@Override
 	public String toString() {
+
 		StringBuilder full = new StringBuilder();
 		StringBuilder indent = new StringBuilder();
 
@@ -99,7 +100,7 @@ public class NonTerminalNode implements TreeNode {
 		return full.toString();
 	}
 
-	public NonTerminal getValue() {
+	public Nonterminal getValue() {
 		return value;
 	}
 	public List<TreeNode> getChildren() {

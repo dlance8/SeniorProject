@@ -1,18 +1,39 @@
 package main;
+import java.util.Arrays;
+import java.util.EnumSet;
 import java.util.HashMap;
+import java.util.LinkedList;
+
 public final class TextConstants {
 	private TextConstants() {}
 	public static final char CR = 0x0A, FF = 0x0C, HT = 0x09, LF = 0x0D, SP = 0x20, SUB = 0x1A;
-	public static final HashMap<String, Terminal> BOOLEAN_LITERALS, NULL_LITERAL, KEYWORDS, SEPARATORS, OPERATORS;
+
+	public static final EnumSet<Terminal> ASSIGNMENT_OPERATORS;
+	public static final EnumSet<TokenType> LITERAL_TYPES;
+
+	public static final HashMap<String, Terminal>
+		BOOLEAN_LITERALS = new HashMap<>(),
+		NULL_LITERAL = new HashMap<>(),
+		KEYWORDS = new HashMap<>(),
+		SEPARATORS = new HashMap<>(),
+		OPERATORS = new HashMap<>();
+
+	public static final LinkedList<HashMap<String, Terminal>> ALL_MAPS = new LinkedList<>(Arrays.asList(BOOLEAN_LITERALS, NULL_LITERAL, KEYWORDS, SEPARATORS, OPERATORS));
+
 	static {
-		BOOLEAN_LITERALS = new HashMap<>();
+		ASSIGNMENT_OPERATORS = EnumSet.of(Terminal.ASSIGN, Terminal.ASSIGN_MULTIPLY, Terminal.ASSIGN_DIVIDE,
+			Terminal.ASSIGN_MOD, Terminal.ASSIGN_ADD, Terminal.ASSIGN_SUBTRACT, Terminal.ASSIGN_LEFT_SHIFT,
+			Terminal.ASSIGN_RIGHT_SHIFT, Terminal.ASSIGN_UNSIGNED_RIGHT_SHIFT, Terminal.ASSIGN_AND, Terminal.ASSIGN_XOR,
+			Terminal.ASSIGN_OR);
+
+		LITERAL_TYPES = EnumSet.of(TokenType.INTEGER_LITERAL, TokenType.FLOATING_POINT_LITERAL,
+			TokenType.BOOLEAN_LITERAL, TokenType.CHARACTER_LITERAL, TokenType.STRING_LITERAL, TokenType.NULL_LITERAL);
+
 		BOOLEAN_LITERALS.put("true",    Terminal.TRUE_LITERAL   );
 		BOOLEAN_LITERALS.put("false",   Terminal.FALSE_LITERAL  );
 
-		NULL_LITERAL = new HashMap<>();
 		NULL_LITERAL.put("null",    Terminal.NULL_LITERAL   );
 
-		KEYWORDS = new HashMap<>();
 		KEYWORDS.put("abstract",        Terminal.ABSTRACT       );
 		KEYWORDS.put("assert",          Terminal.ASSERT         );
 		KEYWORDS.put("boolean",         Terminal.BOOLEAN        );
@@ -64,7 +85,6 @@ public final class TextConstants {
 		KEYWORDS.put("volatile",        Terminal.VOLATILE       );
 		KEYWORDS.put("while",           Terminal.WHILE          );
 
-		SEPARATORS = new HashMap<>();
 		SEPARATORS.put("(",     Terminal.OPEN_PARENTHESIS   );
 		SEPARATORS.put(")",     Terminal.CLOSE_PARENTHESIS  );
 		SEPARATORS.put("{",     Terminal.OPEN_BRACE         );
@@ -78,7 +98,6 @@ public final class TextConstants {
 		SEPARATORS.put("@",     Terminal.AT_SYMBOL          );
 		SEPARATORS.put("::",    Terminal.DOUBLE_COLON       );
 
-		OPERATORS = new HashMap<>();
 		OPERATORS.put("=",      Terminal.ASSIGN                         );
 		OPERATORS.put(">",      Terminal.GREATER_THAN                   );
 		OPERATORS.put("<",      Terminal.LESS_THAN                      );

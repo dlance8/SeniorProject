@@ -1,0 +1,149 @@
+MyRoot
+└───CompilationUnit
+    └───ClassDeclaration
+        ├───ClassModifier
+        │   └───KEYWORD: public
+        ├───KEYWORD: class
+        ├───Identifier
+        │   └───IDENTIFIER: MyClass
+        └───ClassBody
+            ├───SEPARATOR: {
+            ├───ClassBodyDeclaration
+            │   └───MainMethodDeclaration
+            │       ├───KEYWORD: public
+            │       ├───KEYWORD: static
+            │       ├───KEYWORD: void
+            │       ├───Identifier
+            │       │   └───IDENTIFIER: main
+            │       ├───SEPARATOR: (
+            │       ├───Identifier
+            │       │   └───IDENTIFIER: String
+            │       ├───SEPARATOR: [
+            │       ├───SEPARATOR: ]
+            │       ├───Identifier
+            │       │   └───IDENTIFIER: args
+            │       ├───SEPARATOR: )
+            │       └───MethodBody
+            │           └───Block
+            │               ├───SEPARATOR: {
+            │               ├───BlockStatement
+            │               │   └───Statement
+            │               │       └───PrintStatement
+            │               │           ├───Identifier
+            │               │           │   └───IDENTIFIER: System
+            │               │           ├───SEPARATOR: .
+            │               │           ├───Identifier
+            │               │           │   └───IDENTIFIER: out
+            │               │           ├───SEPARATOR: .
+            │               │           ├───Identifier
+            │               │           │   └───IDENTIFIER: println
+            │               │           ├───SEPARATOR: (
+            │               │           ├───Literal
+            │               │           │   └───STRING_LITERAL: "Hello, World!"
+            │               │           ├───SEPARATOR: )
+            │               │           └───SEPARATOR: ;
+            │               └───SEPARATOR: }
+            ├───ClassBodyDeclaration
+            │   └───MethodDeclaration
+            │       ├───MethodModifier
+            │       │   └───KEYWORD: private
+            │       ├───MethodModifier
+            │       │   └───KEYWORD: static
+            │       ├───MethodHeader
+            │       │   ├───Result
+            │       │   │   └───KEYWORD: void
+            │       │   └───MethodDeclarator
+            │       │       ├───Identifier
+            │       │       │   └───IDENTIFIER: myMethod
+            │       │       ├───SEPARATOR: (
+            │       │       └───SEPARATOR: )
+            │       └───MethodBody
+            │           └───Block
+            │               ├───SEPARATOR: {
+            │               ├───BlockStatement
+            │               │   └───LocalVariableDeclarationStatement
+            │               │       ├───LocalVariableDeclaration
+            │               │       │   ├───VariableType
+            │               │       │   │   └───ReferenceType
+            │               │       │   │       └───ArrayType
+            │               │       │   │           ├───PrimitiveType
+            │               │       │   │           │   └───KEYWORD: int
+            │               │       │   │           └───Dims
+            │               │       │   │               ├───SEPARATOR: [
+            │               │       │   │               └───SEPARATOR: ]
+            │               │       │   └───VariableDeclaratorList
+            │               │       │       └───VariableDeclarator
+            │               │       │           ├───VariableDeclaratorId
+            │               │       │           │   └───Identifier
+            │               │       │           │       └───IDENTIFIER: x
+            │               │       │           ├───OPERATOR: =
+            │               │       │           └───VariableInitializer
+            │               │       │               └───ArrayInitializer
+            │               │       │                   ├───SEPARATOR: {
+            │               │       │                   ├───VariableInitializerList
+            │               │       │                   │   ├───VariableInitializer
+            │               │       │                   │   │   └───Expression
+            │               │       │                   │   │       └───AssignmentExpression
+            │               │       │                   │   │           └───ConditionalOrExpression
+            │               │       │                   │   │               └───ConditionalAndExpression
+            │               │       │                   │   │                   └───InclusiveOrExpression
+            │               │       │                   │   │                       └───ExclusiveOrExpression
+            │               │       │                   │   │                           └───AndExpression
+            │               │       │                   │   │                               └───EqualityExpression
+            │               │       │                   │   │                                   └───RelationalExpression
+            │               │       │                   │   │                                       ├───ShiftExpression
+            │               │       │                   │   │                                       │   └───AdditiveExpression
+            │               │       │                   │   │                                       │       └───MultiplicativeExpression
+            │               │       │                   │   │                                       │           └───UnaryExpression
+            │               │       │                   │   │                                       │               └───UnaryExpressionNotPlusMinus
+            │               │       │                   │   │                                       │                   └───PostfixExpression
+            │               │       │                   │   │                                       │                       └───Primary
+            │               │       │                   │   │                                       │                           └───PrimaryNoNewArray
+            │               │       │                   │   │                                       │                               └───Literal
+            │               │       │                   │   │                                       │                                   └───INTEGER_LITERAL: 0
+            │               │       │                   │   │                                       └───ShiftExpression
+            │               │       │                   │   │                                           └───AdditiveExpression
+            │               │       │                   │   │                                               └───MultiplicativeExpression
+            │               │       │                   │   │                                                   └───UnaryExpression
+            │               │       │                   │   │                                                       └───UnaryExpressionNotPlusMinus
+            │               │       │                   │   │                                                           └───PostfixExpression
+            │               │       │                   │   │                                                               └───Primary
+            │               │       │                   │   │                                                                   └───PrimaryNoNewArray
+            │               │       │                   │   │                                                                       └───Literal
+            │               │       │                   │   │                                                                           └───INTEGER_LITERAL: 0
+            │               │       │                   │   ├───SEPARATOR: ,
+            │               │       │                   │   └───VariableInitializer
+            │               │       │                   │       └───Expression
+            │               │       │                   │           └───AssignmentExpression
+            │               │       │                   │               └───ConditionalOrExpression
+            │               │       │                   │                   └───ConditionalAndExpression
+            │               │       │                   │                       └───InclusiveOrExpression
+            │               │       │                   │                           └───ExclusiveOrExpression
+            │               │       │                   │                               └───AndExpression
+            │               │       │                   │                                   └───EqualityExpression
+            │               │       │                   │                                       └───RelationalExpression
+            │               │       │                   │                                           ├───ShiftExpression
+            │               │       │                   │                                           │   └───AdditiveExpression
+            │               │       │                   │                                           │       └───MultiplicativeExpression
+            │               │       │                   │                                           │           └───UnaryExpression
+            │               │       │                   │                                           │               └───UnaryExpressionNotPlusMinus
+            │               │       │                   │                                           │                   └───PostfixExpression
+            │               │       │                   │                                           │                       └───Primary
+            │               │       │                   │                                           │                           └───PrimaryNoNewArray
+            │               │       │                   │                                           │                               └───Literal
+            │               │       │                   │                                           │                                   └───INTEGER_LITERAL: 1
+            │               │       │                   │                                           └───ShiftExpression
+            │               │       │                   │                                               └───AdditiveExpression
+            │               │       │                   │                                                   └───MultiplicativeExpression
+            │               │       │                   │                                                       └───UnaryExpression
+            │               │       │                   │                                                           └───UnaryExpressionNotPlusMinus
+            │               │       │                   │                                                               └───PostfixExpression
+            │               │       │                   │                                                                   └───Primary
+            │               │       │                   │                                                                       └───PrimaryNoNewArray
+            │               │       │                   │                                                                           └───Literal
+            │               │       │                   │                                                                               └───INTEGER_LITERAL: 1
+            │               │       │                   └───SEPARATOR: }
+            │               │       └───SEPARATOR: ;
+            │               └───SEPARATOR: }
+            └───SEPARATOR: }
+

@@ -1,1489 +1,910 @@
-package main;
-
-import javafx.scene.control.TreeItem;
-import tree.NonTerminalNode;
-import tree.TerminalNode;
-
-import java.util.ArrayList;
-
-public class ParserV2 {
-	private final ArrayList<Token> tokens;
-	private boolean parsing;
-	private int currentIndex;
-	private final NonTerminalNode root = new NonTerminalNode(NonTerminal.MY_ROOT);
-	private NonTerminalNode currentParent;
-	private Token currentToken;
-
-	public TreeItem<String> debugRoot;
-	private TreeItem<String> debugCurrent;
-
-	private TreeItem<String> addMessage(String message) {
-		return addMessage(debugCurrent, message);
-	}
-	private TreeItem<String> addMessage(TreeItem<String> parent, String message) {
-		TreeItem<String> newItem = new TreeItem<>(message);
-		parent.getChildren().add(newItem);
-		return newItem;
-	}
-	private TreeItem<String> newCurrent(String message) {
-		return debugCurrent = debugCurrent == null ? debugRoot = new TreeItem<>(message) : addMessage(message);
-	}
-
-	private void $(TreeItem<String> node, boolean accepted) {
-		$(node, accepted, null);
-	}
-	private void $(TreeItem<String> node, boolean accepted, String text) {
-		node.setValue((accepted ? '\u2713' : '\u2717') + node.getValue() + (text == null ? "" : " | " + text));
-	}
-
-	public ParserV2(ArrayList<Token> tokens) {
-		this.tokens = tokens;
-	}
-
-	private interface NonTerminalAcceptor { boolean accept(); }
-
-	private boolean lookAhead(int k, NonTerminalAcceptor acceptor) {
-		return !accept(() -> !accept(() -> {
-			if (!parsing) return false;
-			for (int i = 0; i < k; ++i) {
-				advance();
-				if (!parsing) return false;
-			}
-			return acceptor.accept();
-		}));
-	}
-
-	private boolean lookAhead(int k, Terminal value) {
-		final int index = currentIndex + k;
-		return index < tokens.size() && tokens.get(index).getValue() == value;
-	}
-
-	public NonTerminalNode parse() {
-		start();
-		accept(this::compilationUnit);
-		return root;
-	}
-	private boolean identifier() {
-		System.out.println("IDENTIFIER");
-
-		if (!parsing) return false;
-
-		TreeItem<String> x = addMessage("IDENTIFIER");
-
-		final String text = currentToken.getText();
-		final boolean accepted = acceptAppendAdvance(currentToken.getType() == TokenType.IDENTIFIER);
-		$(x, accepted, text);
-		return accepted;
-	}
-	private boolean assignmentOperator() {
-		System.out.println("ASSIGNMENT OPERATOR");
-		if (!parsing) return false;
-
-		TreeItem<String> x = addMessage("ASSIGNMENT OPERATOR");
-
-		final String text = currentToken.getText();
-		final boolean accepted = acceptAppendAdvance(TextConstants.ASSIGNMENT_OPERATORS.contains(currentToken.getValue()));
-		$(x, accepted, text);
-		return accepted;
-	}
-	private boolean literal() {
-		System.out.println("LITERAL");
-		if (!parsing) return false;
-
-		TreeItem<String> x = addMessage("LITERAL");
-
-		final String text = currentToken.getText();
-		final boolean accepted = TextConstants.LITERAL_TYPES.contains(currentToken.getType());
-		$(x, accepted, text);
-		return accepted;
-	}
-	private boolean accept(NonTerminal value, NonTerminalAcceptor... acceptors) {
-		System.out.println("NONTERMINAL: " + value);
-		final TreeItem<String> oldCurrent = debugCurrent, thisRoot = newCurrent(value.toString());
-
-
-		final NonTerminalNode currentParentAtStart = currentParent;
-
-		final boolean parsingAtStart = parsing;
-		final int currentIndexAtStart = currentIndex;
-		final Token currentTokenAtStart = currentToken;
-
-
-		NonTerminalNode currentParentAtAccepted = currentParent;
-
-		boolean parsingAtAccepted = parsing;
-		int currentIndexAtAccepted = currentIndex;
-		Token currentTokenAtAccepted = currentToken;
-
-		//currentParent = new NonTerminalNode(value);
-
-		boolean acceptedAny = false;
-		int n = 0, k = acceptors.length;
-		for (NonTerminalAcceptor acceptor : acceptors) {
-			currentParent = new NonTerminalNode(value);
-
-			parsing = parsingAtStart;
-			currentIndex = currentIndexAtStart;
-			currentToken = currentTokenAtStart;
-
-			TreeItem<String> x = debugCurrent = addMessage(thisRoot, "\"" + currentToken.getText() + "\": option " + ++n + " of " + k);
-
-			final boolean acceptedThis = accept(acceptor);
-
-			$(x, acceptedThis);
-
-			if (acceptedThis) {
-				acceptedAny = true;
-
-
-				currentParentAtAccepted = currentParent;
-				parsingAtAccepted = parsing;
-				currentIndexAtAccepted = currentIndex;
-				currentTokenAtAccepted = currentToken;
-			}
-		}
-
-//		currentParent = currentParentAtStart;
+//package main;
 //
-//		if (acceptedAny) {
-//			if (currentParentAtAccepted == currentParentAtStart) {
-//				System.err.println(1);
-//				System.exit(1);
+//import javafx.scene.control.TreeItem;
+//import tree.NonterminalNode;
+//import tree.TerminalNode;
+//
+//import java.util.ArrayList;
+//
+//public class ParserV2 {
+//	private final ArrayList<Token> tokens;
+//	private final NonterminalNode root = new NonterminalNode(Nonterminal.MY_ROOT);
+//	private boolean parsing;
+//	private int currentIndex;
+//	private NonterminalNode currentParent;
+//	private Token currentToken;
+//
+//	public TreeItem<String> debugRoot;
+//	private TreeItem<String> debugCurrent;
+//	private TreeItem<String> addMessage(String message) {
+//		return addMessage(debugCurrent, message);
+//	}
+//	private TreeItem<String> addMessage(TreeItem<String> parent, String message) {
+//		TreeItem<String> newItem = new TreeItem<>(message);
+//		parent.getChildren().add(newItem);
+//		return newItem;
+//	}
+//	private TreeItem<String> newCurrent(String message) {
+//		return debugCurrent = debugCurrent == null ? debugRoot = new TreeItem<>(message) : addMessage(message);
+//	}
+//	private void $(TreeItem<String> node, boolean accepted) {
+//		$(node, accepted, null);
+//	}
+//	private void $(TreeItem<String> node, boolean accepted, String text) {
+//		node.setValue((accepted ? '\u2713' : '\u2717') + node.getValue() + (text == null ? "" : " | " + text));
+//	}
+//
+//	public ParserV2(ArrayList<Token> tokens) {
+//		this.tokens = tokens;
+//	}
+//
+//	private interface NonterminalAcceptor { boolean accept(); }
+//
+//	public NonterminalNode parse() {
+//		start();
+//		accept(this::compilationUnit);
+//		return root;
+//	}
+//	private boolean identifier() {
+//		System.out.println("IDENTIFIER: " + currentToken.getType());
+//		return accept(Nonterminal.IDENTIFIER,
+//			() -> acceptAppendAdvance(parsing && currentToken.getType() == TokenType.IDENTIFIER));
+//	}
+//	private boolean identifier(String value) {
+//		return accept(Nonterminal.IDENTIFIER,
+//			() -> {
+//			System.out.println("\"" + currentToken.getText() + "\", \"" + value + "\"");
+//			return acceptAppendAdvance(parsing && currentToken.getType() == TokenType.IDENTIFIER && currentToken.getText().equals(value));
+//
+//		});
+//	}
+//	private boolean literal() {
+//		return accept(Nonterminal.LITERAL,
+//			() -> acceptAppendAdvance(TextConstants.LITERAL_TYPES.contains(currentToken.getType()))
+//		);
+//	}
+//	private boolean check(TokenType type) {
+//		return parsing && currentToken.getType() == type;
+//	}
+//	private boolean check(Terminal value) {
+//		return parsing && currentToken.getValue() == value;
+//	}
+//	private boolean accept(Nonterminal value, Terminal... terminals) {
+//		final NonterminalNode currentParentAtStart = currentParent;
+//		currentParent = new NonterminalNode(value);
+//		boolean acceptedAny = false;
+//		for (Terminal terminal : terminals) {
+//			if (accept(terminal)) {
+//				acceptedAny = true;
+//				break;
 //			}
-//			currentParent.addChild(currentParentAtAccepted);
 //		}
-
-		currentParent = currentParentAtAccepted;
-		parsing = parsingAtAccepted;
-		currentIndex = currentIndexAtAccepted;
-		currentToken = currentTokenAtAccepted;
-
-		final boolean accepted = acceptedAny;
-
-		$(thisRoot, accepted);
-
-		debugCurrent = oldCurrent;
-
-		return accepted;
-	}
-	private boolean accept(NonTerminalAcceptor acceptor) {
-		final TreeItem<String> oldCurrent = debugCurrent, newCurrent = newCurrent("ACCEPT");
-
-		final boolean parsingAtStart = parsing;
-		final int currentIndexAtStart = currentIndex;
-		final NonTerminalNode currentParentAtStart = currentParent;
-		final Token currentTokenAtStart = currentToken;
-
-		final boolean accepted = acceptor.accept();
-		if (accepted) {
-			//System.out.println(currentParentAtStart.getValue() + ", " + currentParent.getValue());
-			System.out.println(currentParentAtStart == currentParent);
-			//currentParentAtStart.addChild(currentParent);
-		} else {
-			parsing = parsingAtStart;
-			currentIndex = currentIndexAtStart;
-			currentParent = currentParentAtStart;
-			currentToken = currentTokenAtStart;
-		}
-		//currentParent = currentParentAtStart;
-
-
-		if (newCurrent.getChildren().size() == 1) {
-			if (oldCurrent != null) {
-				oldCurrent.getChildren().remove(oldCurrent.getChildren().size() - 1);
-				oldCurrent.getChildren().add(newCurrent.getChildren().get(0));
-			}
-		} else {
-			$(newCurrent, accepted);
-		}
-		debugCurrent = oldCurrent;
-
-
-		return accepted;
-	}
-	private boolean accept(Terminal value) {
-		System.out.println("   TERMINAL: " + value);
-		final String text = currentToken.getText();
-
-		final boolean accepted = acceptAppendAdvance(currentToken.getValue() == value);
-
-		TreeItem<String> x = addMessage("TERMINAL: " + value.toString());
-
-		$(x, accepted, text);
-
-		return accepted;
-	}
-	boolean canPrint = true;
-	private boolean acceptRepeating(NonTerminalAcceptor acceptor) {
-		final TreeItem<String> oldCurrent = debugCurrent, newCurrent = newCurrent("ACCEPT REPEATING");
-
-		int n = 0;
-		while (true) {
-			canPrint = true;
-			if (!accept(acceptor)) {
-				break;
-			} else {
-				n++;
-			}
-		}
-
-		$(newCurrent, n > 0);
-		debugCurrent = oldCurrent;
-
-		return true;
-	}
-	private boolean acceptRepeating(Terminal value) {
-		final TreeItem<String> oldCurrent = debugCurrent, newCurrent = newCurrent("ACCEPT REPEATING");
-
-		int n = 0;
-		while (true) {
-			if (!accept(value)) {
-				break;
-			} else {
-				n++;
-			}
-		}
-
-		$(newCurrent, n > 0);
-		debugCurrent = oldCurrent;
-
-		return true;
-	}
-	private boolean acceptOptional(NonTerminalAcceptor acceptor) {
-		final TreeItem<String> oldCurrent = debugCurrent, newCurrent = newCurrent("ACCEPT OPTIONAL");
-		final boolean accepted = accept(acceptor);
-		if (newCurrent.getChildren().size() == 1) {
-			final TreeItem<String> child = newCurrent.getChildren().get(0);
-			child.setValue(new StringBuilder(child.getValue()).insert(1, '[').append(']').toString());
-			oldCurrent.getChildren().set(oldCurrent.getChildren().size() - 1, child);
-		} else $(newCurrent, accepted);
-		debugCurrent = oldCurrent;
-		return true;
-	}
-	private boolean acceptOptional(Terminal value) {
-		final TreeItem<String> oldCurrent = debugCurrent, newCurrent = newCurrent("ACCEPT OPTIONAL");
-		final boolean accepted = accept(value);
-		if (newCurrent.getChildren().size() == 1) {
-			final TreeItem<String> child = newCurrent.getChildren().get(0);
-			child.setValue(new StringBuilder(child.getValue()).insert(2, '[').append(']').toString());
-			oldCurrent.getChildren().set(oldCurrent.getChildren().size() - 1, child);
-		} else $(newCurrent, accepted);
-		debugCurrent = oldCurrent;
-		return true;
-	}
-	private void start() {
-		currentParent = root;
-		currentIndex = -1;
-		advance();
-	}
-	private void advance() {
-		currentToken = (parsing = ++currentIndex < tokens.size()) ? tokens.get(currentIndex) : new Token(null);
-	}
-	private boolean acceptAppendAdvance(boolean accepted) {
-		if (accepted &= parsing) {
-			currentParent.addChild(new TerminalNode(currentToken));
-			advance();
-		}
-		return accepted;
-	}
-
-	/*===============================================================================================================*
-	 *                                      ABANDON ALL HOPE, YE WHO ENTER HERE                                      *
-	 *===============================================================================================================*/
-
-
-	private boolean primitiveType() {
-		return accept(NonTerminal.PRIMITIVE_TYPE,
-			() -> acceptRepeating(this::annotation) && accept(this::numericType),
-			() -> acceptRepeating(this::annotation) && accept(Terminal.BOOLEAN));
-	}
-	private boolean numericType() {
-		return accept(NonTerminal.NUMERIC_TYPE,
-			() -> accept(this::integralType),
-			() -> accept(this::floatingPointType));
-	}
-	private boolean integralType() {
-		return accept(NonTerminal.INTEGRAL_TYPE,
-			() -> accept(Terminal.BYTE),
-			() -> accept(Terminal.SHORT),
-			() -> accept(Terminal.INT),
-			() -> accept(Terminal.LONG),
-			() -> accept(Terminal.CHAR));
-	}
-	private boolean floatingPointType() {
-		return accept(NonTerminal.FLOATING_POINT_TYPE,
-			() -> accept(Terminal.FLOAT),
-			() -> accept(Terminal.DOUBLE));
-	}
-	private boolean referenceType() {
-		return accept(NonTerminal.REFERENCE_TYPE,
-			() -> accept(this::classOrInterfaceType),
-			() -> accept(this::typeVariable),
-			() -> accept(this::arrayType));
-	}
-	private boolean classOrInterfaceType() {
-		return accept(NonTerminal.CLASS_OR_INTERFACE_TYPE,
-			() -> accept(this::classType),
-			() -> accept(this::interfaceType));
-	}
-	private boolean classType() {
-		return accept(NonTerminal.CLASS_TYPE,
-			() -> acceptRepeating(this::annotation) && accept(this::identifier) && acceptOptional(this::typeArguments),
-			() -> accept(this::classOrInterfaceType) && accept(Terminal.DOT) && acceptRepeating(this::annotation) && accept(this::identifier) && acceptOptional(this::typeArguments));
-	}
-	private boolean interfaceType() {
-		return accept(NonTerminal.INTERFACE_TYPE,
-			() -> accept(this::classType));
-	}
-	private boolean typeVariable() {
-		return accept(NonTerminal.TYPE_VARIABLE,
-			() -> acceptRepeating(this::annotation) && accept(this::identifier));
-	}
-	private boolean arrayType() {
-		return accept(NonTerminal.ARRAY_TYPE,
-			() -> accept(this::primitiveType) && accept(this::dims),
-			() -> accept(this::classOrInterfaceType) && accept(this::dims),
-			() -> accept(this::typeVariable) && accept(this::dims));
-	}
-	private boolean dims() {
-		return accept(NonTerminal.DIMS,
-			() -> acceptRepeating(this::annotation) && accept(Terminal.OPEN_BRACKET) && accept(Terminal.CLOSE_BRACKET) && acceptRepeating(() -> acceptRepeating(this::annotation) && accept(Terminal.OPEN_BRACKET) && accept(Terminal.CLOSE_BRACKET)));
-	}
-	private boolean typeParameter() {
-		return accept(NonTerminal.TYPE_PARAMETER,
-			() -> acceptRepeating(this::typeParameterModifier) && accept(this::identifier) && acceptOptional(this::typeBound));
-	}
-	private boolean typeParameterModifier() {
-		return accept(NonTerminal.TYPE_PARAMETER_MODIFIER,
-			() -> accept(this::annotation));
-	}
-	private boolean typeBound() {
-		return accept(NonTerminal.TYPE_BOUND,
-			() -> accept(Terminal.EXTENDS) && accept(this::typeVariable),
-			() -> accept(Terminal.EXTENDS) && accept(this::classOrInterfaceType) && acceptRepeating(this::additionalBound));
-	}
-	private boolean additionalBound() {
-		return accept(NonTerminal.ADDITIONAL_BOUND,
-			() -> accept(Terminal.AND) && accept(this::interfaceType));
-	}
-	private boolean typeArguments() {
-		return accept(NonTerminal.TYPE_ARGUMENTS,
-			() -> accept(Terminal.LESS_THAN) && accept(this::typeArgumentList) && accept(Terminal.GREATER_THAN));
-	}
-	private boolean typeArgumentList() {
-		return accept(NonTerminal.TYPE_ARGUMENT_LIST,
-			() -> accept(this::typeArgument) && acceptRepeating(() -> accept(Terminal.COMMA) && accept(this::typeArgument)));
-	}
-	private boolean typeArgument() {
-		return accept(NonTerminal.TYPE_ARGUMENT,
-			() -> accept(this::referenceType),
-			() -> accept(this::wildcard));
-	}
-	private boolean wildcard() {
-		return accept(NonTerminal.WILDCARD,
-			() -> acceptRepeating(this::annotation) && accept(Terminal.TERNARY) && acceptOptional(this::wildcardBounds));
-	}
-	private boolean wildcardBounds() {
-		return accept(NonTerminal.WILDCARD_BOUNDS,
-			() -> accept(Terminal.EXTENDS) && accept(this::referenceType),
-			() -> accept(Terminal.SUPER) && accept(this::referenceType));
-	}
-	private boolean typeName() {
-		return accept(NonTerminal.TYPE_NAME, this::identifier);
-	}
-	private boolean expressionName() {
-		return accept(NonTerminal.EXPRESSION_NAME, this::identifier);
-	}
-	private boolean methodName() {
-		return accept(NonTerminal.METHOD_NAME, this::identifier);
-	}
-	private boolean compilationUnit() {
-		return accept(NonTerminal.COMPILATION_UNIT,
-			() -> acceptRepeating(this::typeDeclaration));
-	}
-	private boolean typeDeclaration() {
-		return accept(NonTerminal.TYPE_DECLARATION,
-			() -> accept(this::classDeclaration),
-			() -> accept(this::interfaceDeclaration),
-			() -> accept(Terminal.SEMICOLON));
-	}
-	private boolean classDeclaration() {
-		return accept(NonTerminal.CLASS_DECLARATION,
-			() -> accept(this::normalClassDeclaration),
-			() -> accept(this::enumDeclaration));
-	}
-	private boolean normalClassDeclaration() {
-		return accept(NonTerminal.NORMAL_CLASS_DECLARATION,
-			() -> acceptRepeating(this::classModifier) && accept(Terminal.CLASS) && accept(this::identifier) && acceptOptional(this::typeParameters) && acceptOptional(this::superclass) && acceptOptional(this::superinterfaces) && accept(this::classBody));
-	}
-	private boolean classModifier() {
-		return accept(NonTerminal.CLASS_MODIFIER,
-			() -> accept(this::annotation),
-			() -> accept(Terminal.PUBLIC),
-			() -> accept(Terminal.PROTECTED),
-			() -> accept(Terminal.PRIVATE),
-			() -> accept(Terminal.ABSTRACT),
-			() -> accept(Terminal.STATIC),
-			() -> accept(Terminal.FINAL),
-			() -> accept(Terminal.STRICTFP));
-	}
-	private boolean typeParameters() {
-		return accept(NonTerminal.TYPE_PARAMETERS,
-			() -> accept(Terminal.LESS_THAN) && accept(this::typeParameterList) && accept(Terminal.GREATER_THAN));
-	}
-	private boolean typeParameterList() {
-		return accept(NonTerminal.TYPE_PARAMETER_LIST,
-			() -> accept(this::typeParameter) && acceptRepeating(() -> accept(Terminal.COMMA) && accept(this::typeParameter)));
-	}
-	private boolean superclass() {
-		return accept(NonTerminal.SUPERCLASS,
-			() -> accept(Terminal.EXTENDS) && accept(this::classType));
-	}
-	private boolean superinterfaces() {
-		return accept(NonTerminal.SUPERINTERFACES,
-			() -> accept(Terminal.IMPLEMENTS) && accept(this::interfaceTypeList));
-	}
-	private boolean interfaceTypeList() {
-		return accept(NonTerminal.INTERFACE_TYPE_LIST,
-			() -> accept(this::interfaceType) && acceptRepeating(() -> accept(Terminal.COMMA) && accept(this::interfaceType)));
-	}
-	private boolean classBody() {
-		return accept(NonTerminal.CLASS_BODY,
-			() -> accept(Terminal.OPEN_BRACE) && acceptRepeating(this::classBodyDeclaration) && accept(Terminal.CLOSE_BRACE));
-	}
-	private boolean classBodyDeclaration() {
-		return accept(NonTerminal.CLASS_BODY_DECLARATION,
-			() -> accept(this::classMemberDeclaration),
-			() -> accept(this::instanceInitializer),
-			() -> accept(this::staticInitializer),
-			() -> accept(this::constructorDeclaration));
-	}
-	private boolean classMemberDeclaration() {
-		return accept(NonTerminal.CLASS_MEMBER_DECLARATION,
-			() -> accept(this::fieldDeclaration),
-			() -> accept(this::methodDeclaration),
-			() -> accept(this::classDeclaration),
-			() -> accept(this::interfaceDeclaration),
-			() -> accept(Terminal.SEMICOLON));
-	}
-	private boolean fieldDeclaration() {
-		return accept(NonTerminal.FIELD_DECLARATION,
-			() -> acceptRepeating(this::fieldModifier) && accept(this::unannType) && accept(this::variableDeclaratorList) && accept(Terminal.SEMICOLON));
-	}
-	private boolean fieldModifier() {
-		return accept(NonTerminal.FIELD_MODIFIER,
-			() -> accept(this::annotation),
-			() -> accept(Terminal.PUBLIC),
-			() -> accept(Terminal.PROTECTED),
-			() -> accept(Terminal.PRIVATE),
-			() -> accept(Terminal.STATIC),
-			() -> accept(Terminal.FINAL),
-			() -> accept(Terminal.TRANSIENT),
-			() -> accept(Terminal.VOLATILE));
-	}
-	private boolean variableDeclaratorList() {
-		return accept(NonTerminal.VARIABLE_DECLARATOR_LIST,
-			() -> accept(this::variableDeclarator) && acceptRepeating(() -> accept(Terminal.COMMA) && accept(this::variableDeclarator)));
-	}
-	private boolean variableDeclarator() {
-		return accept(NonTerminal.VARIABLE_DECLARATOR,
-			() -> accept(this::variableDeclaratorId) && acceptOptional(() -> accept(Terminal.ASSIGN) && accept(this::variableInitializer)));
-	}
-	private boolean variableDeclaratorId() {
-		return accept(NonTerminal.VARIABLE_DECLARATOR_ID,
-			() -> accept(this::identifier) && acceptOptional(this::dims));
-	}
-	private boolean variableInitializer() {
-		return accept(NonTerminal.VARIABLE_INITIALIZER,
-			() -> accept(this::expression),
-			() -> accept(this::arrayInitializer));
-	}
-	private boolean unannType() {
-		return accept(NonTerminal.UNANN_TYPE,
-			() -> accept(this::unannPrimitiveType),
-			() -> accept(this::unannReferenceType));
-	}
-	private boolean unannPrimitiveType() {
-		return accept(NonTerminal.UNANN_PRIMITIVE_TYPE,
-			() -> accept(this::numericType),
-			() -> accept(Terminal.BOOLEAN));
-	}
-	private boolean unannReferenceType() {
-		return accept(NonTerminal.UNANN_REFERENCE_TYPE,
-			() -> accept(this::unannClassOrInterfaceType),
-			() -> accept(this::unannTypeVariable),
-			() -> accept(this::unannArrayType));
-	}
-	private boolean unannClassOrInterfaceType() {
-		return accept(NonTerminal.UNANN_CLASS_OR_INTERFACE_TYPE,
-			() -> accept(this::unannClassType),
-			() -> accept(this::unannInterfaceType));
-	}
-	private boolean unannClassType() {
-		return accept(NonTerminal.UNANN_CLASS_TYPE,
-			() -> accept(this::identifier) && acceptOptional(this::typeArguments) && acceptRepeating(() -> accept(Terminal.DOT) && acceptRepeating(this::annotation) && accept(this::identifier) && acceptOptional(this::typeArguments)));
-	}
-	private boolean unannInterfaceType() {
-		return accept(NonTerminal.UNANN_INTERFACE_TYPE,
-			() -> accept(this::unannClassType));
-	}
-	private boolean unannTypeVariable() {
-		return accept(NonTerminal.UNANN_TYPE_VARIABLE,
-			() -> accept(this::identifier));
-	}
-	private boolean unannArrayType() {
-		return accept(NonTerminal.UNANN_ARRAY_TYPE,
-			() -> accept(this::unannPrimitiveType) && accept(this::dims),
-			() -> accept(this::unannClassOrInterfaceType) && accept(this::dims),
-			() -> accept(this::unannTypeVariable) && accept(this::dims));
-	}
-	private boolean methodDeclaration() {
-		return accept(NonTerminal.METHOD_DECLARATION,
-			() -> acceptRepeating(this::methodModifier) && accept(this::methodHeader) && accept(this::methodBody));
-	}
-	private boolean methodModifier() {
-		return accept(NonTerminal.METHOD_MODIFIER,
-			() -> accept(this::annotation),
-			() -> accept(Terminal.PUBLIC),
-			() -> accept(Terminal.PROTECTED),
-			() -> accept(Terminal.PRIVATE),
-			() -> accept(Terminal.ABSTRACT),
-			() -> accept(Terminal.STATIC),
-			() -> accept(Terminal.FINAL),
-			() -> accept(Terminal.SYNCHRONIZED),
-			() -> accept(Terminal.NATIVE),
-			() -> accept(Terminal.STRICTFP));
-	}
-	private boolean methodHeader() {
-		return accept(NonTerminal.METHOD_HEADER,
-			() -> accept(this::result) && accept(this::methodDeclarator) && acceptOptional(this::throws_),
-			() -> accept(this::typeParameters) && acceptRepeating(this::annotation) && accept(this::result) && accept(this::methodDeclarator) && acceptOptional(this::throws_));
-	}
-	private boolean result() {
-		return accept(NonTerminal.RESULT,
-			() -> accept(this::unannType),
-			() -> accept(Terminal.VOID));
-	}
-	private boolean methodDeclarator() {
-		return accept(NonTerminal.METHOD_DECLARATOR,
-			() -> accept(this::identifier) && accept(Terminal.OPEN_PARENTHESIS) && acceptOptional(this::formalParameterList) && accept(Terminal.CLOSE_PARENTHESIS) && acceptOptional(this::dims));
-	}
-	private boolean formalParameterList() {
-		return accept(NonTerminal.FORMAL_PARAMETER_LIST,
-			() -> accept(this::receiverParameter),
-			() -> accept(this::formalParameters) && accept(Terminal.COMMA) && accept(this::lastFormalParameter),
-			() -> accept(this::lastFormalParameter));
-	}
-	private boolean formalParameters() {
-		return accept(NonTerminal.FORMAL_PARAMETERS,
-			() -> accept(this::formalParameter) && acceptRepeating(() -> accept(Terminal.COMMA) && accept(this::formalParameter)),
-			() -> accept(this::receiverParameter) && acceptRepeating(() -> accept(Terminal.COMMA) && accept(this::formalParameter)));
-	}
-	private boolean formalParameter() {
-		return accept(NonTerminal.FORMAL_PARAMETER,
-			() -> acceptRepeating(this::variableModifier) && accept(this::unannType) && accept(this::variableDeclaratorId));
-	}
-	private boolean variableModifier() {
-		return accept(NonTerminal.VARIABLE_MODIFIER,
-			() -> accept(this::annotation),
-			() -> accept(Terminal.FINAL));
-	}
-	private boolean lastFormalParameter() {
-		return accept(NonTerminal.LAST_FORMAL_PARAMETER,
-			() -> acceptRepeating(this::variableModifier) && accept(this::unannType) && acceptRepeating(this::annotation) && accept(Terminal.ELLIPSES) && accept(this::variableDeclaratorId),
-			() -> accept(this::formalParameter));
-	}
-	private boolean receiverParameter() {
-		return accept(NonTerminal.RECEIVER_PARAMETER,
-			() -> acceptRepeating(this::annotation) && accept(this::unannType) && acceptOptional(() -> accept(this::identifier) && accept(Terminal.DOT)) && accept(Terminal.THIS));
-	}
-	private boolean throws_() {
-		return accept(NonTerminal.THROWS,
-			() -> accept(Terminal.THROWS) && accept(this::exceptionTypeList));
-	}
-	private boolean exceptionTypeList() {
-		return accept(NonTerminal.EXCEPTION_TYPE_LIST,
-			() -> accept(this::exceptionType) && acceptRepeating(() -> accept(Terminal.COMMA) && accept(this::exceptionType)));
-	}
-	private boolean exceptionType() {
-		return accept(NonTerminal.EXCEPTION_TYPE,
-			() -> accept(this::classType),
-			() -> accept(this::typeVariable));
-	}
-	private boolean methodBody() {
-		return accept(NonTerminal.METHOD_BODY,
-			() -> accept(this::block),
-			() -> accept(Terminal.SEMICOLON));
-	}
-	private boolean instanceInitializer() {
-		return accept(NonTerminal.INSTANCE_INITIALIZER,
-			() -> accept(this::block));
-	}
-	private boolean staticInitializer() {
-		return accept(NonTerminal.STATIC_INITIALIZER,
-			() -> accept(Terminal.STATIC) && accept(this::block));
-	}
-	private boolean constructorDeclaration() {
-		return accept(NonTerminal.CONSTRUCTOR_DECLARATION,
-			() -> acceptRepeating(this::constructorModifier) && accept(this::constructorDeclarator) && acceptOptional(this::throws_) && accept(this::constructorBody));
-	}
-	private boolean constructorModifier() {
-		return accept(NonTerminal.CONSTRUCTOR_MODIFIER,
-			() -> accept(this::annotation),
-			() -> accept(Terminal.PUBLIC),
-			() -> accept(Terminal.PROTECTED),
-			() -> accept(Terminal.PRIVATE));
-	}
-	private boolean constructorDeclarator() {
-		return accept(NonTerminal.CONSTRUCTOR_DECLARATOR,
-			() -> acceptOptional(this::typeParameters) && accept(this::simpleTypeName) && accept(Terminal.OPEN_PARENTHESIS) && acceptOptional(this::formalParameterList) && accept(Terminal.CLOSE_PARENTHESIS));
-	}
-	private boolean simpleTypeName() {
-		return accept(NonTerminal.SIMPLE_TYPE_NAME,
-			() -> accept(this::identifier));
-	}
-	private boolean constructorBody() {
-		return accept(NonTerminal.CONSTRUCTOR_BODY,
-			() -> accept(Terminal.OPEN_BRACE) && acceptOptional(this::explicitConstructorInvocation) && acceptOptional(this::blockStatements) && accept(Terminal.CLOSE_BRACE));
-	}
-	private boolean explicitConstructorInvocation() {
-		return accept(NonTerminal.EXPLICIT_CONSTRUCTOR_INVOCATION,
-			() -> acceptOptional(this::typeArguments) && accept(Terminal.THIS) && accept(Terminal.OPEN_PARENTHESIS) && acceptOptional(this::argumentList) && accept(Terminal.CLOSE_PARENTHESIS) && accept(Terminal.SEMICOLON),
-			() -> acceptOptional(this::typeArguments) && accept(Terminal.SUPER) && accept(Terminal.OPEN_PARENTHESIS) && acceptOptional(this::argumentList) && accept(Terminal.CLOSE_PARENTHESIS) && accept(Terminal.SEMICOLON),
-			() -> accept(this::expressionName) && accept(Terminal.DOT) && acceptOptional(this::typeArguments) && accept(Terminal.SUPER) && accept(Terminal.OPEN_PARENTHESIS) && acceptOptional(this::argumentList) && accept(Terminal.CLOSE_PARENTHESIS) && accept(Terminal.SEMICOLON),
-			() -> accept(this::primary) && accept(Terminal.DOT) && acceptOptional(this::typeArguments) && accept(Terminal.SUPER) && accept(Terminal.OPEN_PARENTHESIS) && acceptOptional(this::argumentList) && accept(Terminal.CLOSE_PARENTHESIS) && accept(Terminal.SEMICOLON));
-	}
-	private boolean enumDeclaration() {
-		return accept(NonTerminal.ENUM_DECLARATION,
-			() -> acceptRepeating(this::classModifier) && accept(Terminal.ENUM) && accept(this::identifier) && acceptOptional(this::superinterfaces) && accept(this::enumBody));
-	}
-	private boolean enumBody() {
-		return accept(NonTerminal.ENUM_BODY,
-			() -> accept(Terminal.OPEN_BRACE) && acceptOptional(this::enumConstantList) && acceptOptional(Terminal.COMMA) && acceptOptional(this::enumBodyDeclarations) && accept(Terminal.CLOSE_BRACE));
-	}
-	private boolean enumConstantList() {
-		return accept(NonTerminal.ENUM_CONSTANT_LIST,
-			() -> accept(this::enumConstant) && acceptRepeating(() -> accept(Terminal.COMMA) && accept(this::enumConstant)));
-	}
-	private boolean enumConstant() {
-		return accept(NonTerminal.ENUM_CONSTANT,
-			() -> acceptRepeating(this::enumConstantModifier) && accept(this::identifier) && acceptOptional(() -> accept(Terminal.OPEN_PARENTHESIS) && acceptOptional(this::argumentList) && accept(Terminal.CLOSE_PARENTHESIS)) && acceptOptional(this::classBody));
-	}
-	private boolean enumConstantModifier() {
-		return accept(NonTerminal.ENUM_CONSTANT_MODIFIER,
-			() -> accept(this::annotation));
-	}
-	private boolean enumBodyDeclarations() {
-		return accept(NonTerminal.ENUM_BODY_DECLARATIONS,
-			() -> accept(Terminal.SEMICOLON) && acceptRepeating(this::classBodyDeclaration));
-	}
-	private boolean interfaceDeclaration() {
-		return accept(NonTerminal.INTERFACE_DECLARATION,
-			() -> accept(this::normalInterfaceDeclaration),
-			() -> accept(this::annotationTypeDeclaration));
-	}
-	private boolean normalInterfaceDeclaration() {
-		return accept(NonTerminal.NORMAL_INTERFACE_DECLARATION,
-			() -> acceptRepeating(this::interfaceModifier) && accept(Terminal.INTERFACE) && accept(this::identifier) && acceptOptional(this::typeParameters) && acceptOptional(this::extendsInterfaces) && accept(this::interfaceBody));
-	}
-	private boolean interfaceModifier() {
-		return accept(NonTerminal.INTERFACE_MODIFIER,
-			() -> accept(this::annotation),
-			() -> accept(Terminal.PUBLIC),
-			() -> accept(Terminal.PROTECTED),
-			() -> accept(Terminal.PRIVATE),
-			() -> accept(Terminal.ABSTRACT),
-			() -> accept(Terminal.STATIC),
-			() -> accept(Terminal.STRICTFP));
-	}
-	private boolean extendsInterfaces() {
-		return accept(NonTerminal.EXTENDS_INTERFACES,
-			() -> accept(Terminal.EXTENDS) && accept(this::interfaceTypeList));
-	}
-	private boolean interfaceBody() {
-		return accept(NonTerminal.INTERFACE_BODY,
-			() -> accept(Terminal.OPEN_BRACE) && acceptRepeating(this::interfaceMemberDeclaration) && accept(Terminal.CLOSE_BRACE));
-	}
-	private boolean interfaceMemberDeclaration() {
-		return accept(NonTerminal.INTERFACE_MEMBER_DECLARATION,
-			() -> accept(this::constantDeclaration),
-			() -> accept(this::interfaceMethodDeclaration),
-			() -> accept(this::classDeclaration),
-			() -> accept(this::interfaceDeclaration),
-			() -> accept(Terminal.SEMICOLON));
-	}
-	private boolean constantDeclaration() {
-		return accept(NonTerminal.CONSTANT_DECLARATION,
-			() -> acceptRepeating(this::constantModifier) && accept(this::unannType) && accept(this::variableDeclaratorList) && accept(Terminal.SEMICOLON));
-	}
-	private boolean constantModifier() {
-		return accept(NonTerminal.CONSTANT_MODIFIER,
-			() -> accept(this::annotation),
-			() -> accept(Terminal.PUBLIC),
-			() -> accept(Terminal.STATIC),
-			() -> accept(Terminal.FINAL));
-	}
-	private boolean interfaceMethodDeclaration() {
-		return accept(NonTerminal.INTERFACE_METHOD_DECLARATION,
-			() -> acceptRepeating(this::interfaceMethodModifier) && accept(this::methodHeader) && accept(this::methodBody));
-	}
-	private boolean interfaceMethodModifier() {
-		return accept(NonTerminal.INTERFACE_METHOD_MODIFIER,
-			() -> accept(this::annotation),
-			() -> accept(Terminal.PUBLIC),
-			() -> accept(Terminal.ABSTRACT),
-			() -> accept(Terminal.DEFAULT),
-			() -> accept(Terminal.STATIC),
-			() -> accept(Terminal.STRICTFP));
-	}
-	private boolean annotationTypeDeclaration() {
-		return accept(NonTerminal.ANNOTATION_TYPE_DECLARATION,
-			() -> acceptRepeating(this::interfaceModifier) && accept(Terminal.AT_SYMBOL) && accept(Terminal.INTERFACE) && accept(this::identifier) && accept(this::annotationTypeBody));
-	}
-	private boolean annotationTypeBody() {
-		return accept(NonTerminal.ANNOTATION_TYPE_BODY,
-			() -> accept(Terminal.OPEN_BRACE) && acceptRepeating(this::annotationTypeMemberDeclaration) && accept(Terminal.CLOSE_BRACE));
-	}
-	private boolean annotationTypeMemberDeclaration() {
-		return accept(NonTerminal.ANNOTATION_TYPE_MEMBER_DECLARATION,
-			() -> accept(this::annotationTypeElementDeclaration),
-			() -> accept(this::constantDeclaration),
-			() -> accept(this::classDeclaration),
-			() -> accept(this::interfaceDeclaration),
-			() -> accept(Terminal.SEMICOLON));
-	}
-	private boolean annotationTypeElementDeclaration() {
-		return accept(NonTerminal.ANNOTATION_TYPE_ELEMENT_DECLARATION,
-			() -> acceptRepeating(this::annotationTypeElementModifier) && accept(this::unannType) && accept(this::identifier) && accept(Terminal.OPEN_PARENTHESIS) && accept(Terminal.CLOSE_PARENTHESIS) && acceptOptional(this::dims) && acceptOptional(this::defaultValue) && accept(Terminal.SEMICOLON));
-	}
-	private boolean annotationTypeElementModifier() {
-		return accept(NonTerminal.ANNOTATION_TYPE_ELEMENT_MODIFIER,
-			() -> accept(this::annotation),
-			() -> accept(Terminal.PUBLIC),
-			() -> accept(Terminal.ABSTRACT));
-	}
-	private boolean defaultValue() {
-		return accept(NonTerminal.DEFAULT_VALUE,
-			() -> accept(Terminal.DEFAULT) && accept(this::elementValue));
-	}
-	private boolean annotation() {
-		return accept(NonTerminal.ANNOTATION,
-			() -> accept(this::normalAnnotation),
-			() -> accept(this::markerAnnotation),
-			() -> accept(this::singleElementAnnotation));
-	}
-	private boolean normalAnnotation() {
-		return accept(NonTerminal.NORMAL_ANNOTATION,
-			() -> accept(Terminal.AT_SYMBOL) && accept(this::typeName) && accept(Terminal.OPEN_PARENTHESIS) && acceptOptional(this::elementValuePairList) && accept(Terminal.CLOSE_PARENTHESIS));
-	}
-	private boolean elementValuePairList() {
-		return accept(NonTerminal.ELEMENT_VALUE_PAIR_LIST,
-			() -> accept(this::elementValuePair) && acceptRepeating(() -> accept(Terminal.COMMA) && accept(this::elementValuePair)));
-	}
-	private boolean elementValuePair() {
-		return accept(NonTerminal.ELEMENT_VALUE_PAIR,
-			() -> accept(this::identifier) && accept(Terminal.ASSIGN) && accept(this::elementValue));
-	}
-	private boolean elementValue() {
-		return accept(NonTerminal.ELEMENT_VALUE,
-			() -> accept(this::conditionalExpression),
-			() -> accept(this::elementValueArrayInitializer),
-			() -> accept(this::annotation));
-	}
-	private boolean elementValueArrayInitializer() {
-		return accept(NonTerminal.ELEMENT_VALUE_ARRAY_INITIALIZER,
-			() -> accept(Terminal.OPEN_BRACE) && acceptOptional(this::elementValueList) && acceptOptional(Terminal.COMMA) && accept(Terminal.CLOSE_BRACE));
-	}
-	private boolean elementValueList() {
-		return accept(NonTerminal.ELEMENT_VALUE_LIST,
-			() -> accept(this::elementValue) && acceptRepeating(() -> accept(Terminal.COMMA) && accept(this::elementValue)));
-	}
-	private boolean markerAnnotation() {
-		return accept(NonTerminal.MARKER_ANNOTATION,
-			() -> accept(Terminal.AT_SYMBOL) && accept(this::typeName));
-	}
-	private boolean singleElementAnnotation() {
-		return accept(NonTerminal.SINGLE_ELEMENT_ANNOTATION,
-			() -> accept(Terminal.AT_SYMBOL) && accept(this::typeName) && accept(Terminal.OPEN_PARENTHESIS) && accept(this::elementValue) && accept(Terminal.CLOSE_PARENTHESIS));
-	}
-	private boolean arrayInitializer() {
-		return accept(NonTerminal.ARRAY_INITIALIZER,
-			() -> accept(Terminal.OPEN_BRACE) && acceptOptional(this::variableInitializerList) && acceptOptional(Terminal.COMMA) && accept(Terminal.CLOSE_BRACE));
-	}
-	private boolean variableInitializerList() {
-		return accept(NonTerminal.VARIABLE_INITIALIZER_LIST,
-			() -> accept(this::variableInitializer) && acceptRepeating(() -> accept(Terminal.COMMA) && accept(this::variableInitializer)));
-	}
-	private boolean block() {
-		return accept(NonTerminal.BLOCK,
-			() -> accept(Terminal.OPEN_BRACE) && acceptOptional(this::blockStatements) && accept(Terminal.CLOSE_BRACE));
-	}
-	private boolean blockStatements() {
-		return accept(NonTerminal.BLOCK_STATEMENTS,
-			() -> accept(this::blockStatement) && acceptRepeating(this::blockStatement));
-	}
-	private boolean blockStatement() {
-		return accept(NonTerminal.BLOCK_STATEMENT,
-			() -> accept(this::localVariableDeclarationStatement),
-			() -> accept(this::classDeclaration),
-			() -> accept(this::statement));
-	}
-	private boolean localVariableDeclarationStatement() {
-		return accept(NonTerminal.LOCAL_VARIABLE_DECLARATION_STATEMENT,
-			() -> accept(this::localVariableDeclaration) && accept(Terminal.SEMICOLON));
-	}
-	private boolean localVariableDeclaration() {
-		return accept(NonTerminal.LOCAL_VARIABLE_DECLARATION,
-			() -> acceptRepeating(this::variableModifier) && accept(this::unannType) && accept(this::variableDeclaratorList));
-	}
-	private boolean statement() {
-		return accept(NonTerminal.STATEMENT,
-			() -> accept(this::statementWithoutTrailingSubstatement),
-			() -> accept(this::labeledStatement),
-			() -> accept(this::ifThenStatement),
-			() -> accept(this::ifThenElseStatement),
-			() -> accept(this::whileStatement),
-			() -> accept(this::forStatement));
-	}
-	private boolean statementNoShortIf() {
-		return accept(NonTerminal.STATEMENT_NO_SHORT_IF,
-			() -> accept(this::statementWithoutTrailingSubstatement),
-			() -> accept(this::labeledStatementNoShortIf),
-			() -> accept(this::ifThenElseStatementNoShortIf),
-			() -> accept(this::whileStatementNoShortIf),
-			() -> accept(this::forStatementNoShortIf));
-	}
-	private boolean statementWithoutTrailingSubstatement() {
-		return accept(NonTerminal.STATEMENT_WITHOUT_TRAILING_SUBSTATEMENT,
-			() -> accept(this::block),
-			() -> accept(this::emptyStatement),
-			() -> accept(this::expressionStatement),
-			() -> accept(this::assertStatement),
-			() -> accept(this::switchStatement),
-			() -> accept(this::doStatement),
-			() -> accept(this::breakStatement),
-			() -> accept(this::continueStatement),
-			() -> accept(this::returnStatement),
-			() -> accept(this::synchronizedStatement),
-			() -> accept(this::throwStatement),
-			() -> accept(this::tryStatement));
-	}
-	private boolean emptyStatement() {
-		return accept(NonTerminal.EMPTY_STATEMENT,
-			() -> accept(Terminal.SEMICOLON));
-	}
-	private boolean labeledStatement() {
-		return accept(NonTerminal.LABELED_STATEMENT,
-			() -> accept(this::identifier) && accept(Terminal.COLON) && accept(this::statement));
-	}
-	private boolean labeledStatementNoShortIf() {
-		return accept(NonTerminal.LABELED_STATEMENT_NO_SHORT_IF,
-			() -> accept(this::identifier) && accept(Terminal.COLON) && accept(this::statementNoShortIf));
-	}
-	private boolean expressionStatement() {
-		return accept(NonTerminal.EXPRESSION_STATEMENT,
-			() -> accept(this::statementExpression) && accept(Terminal.SEMICOLON));
-	}
-	private boolean statementExpression() {
-		return accept(NonTerminal.STATEMENT_EXPRESSION,
-			() -> accept(this::assignment),
-			() -> accept(this::preIncrementExpression),
-			() -> accept(this::preDecrementExpression),
-			() -> accept(this::postIncrementExpression),
-			() -> accept(this::postDecrementExpression),
-			() -> accept(this::methodInvocation),
-			() -> accept(this::classInstanceCreationExpression));
-	}
-	private boolean ifThenStatement() {
-		return accept(NonTerminal.IF_THEN_STATEMENT,
-			() -> accept(Terminal.IF) && accept(Terminal.OPEN_PARENTHESIS) && accept(this::expression) && accept(Terminal.CLOSE_PARENTHESIS) && accept(this::statement));
-	}
-	private boolean ifThenElseStatement() {
-		return accept(NonTerminal.IF_THEN_ELSE_STATEMENT,
-			() -> accept(Terminal.IF) && accept(Terminal.OPEN_PARENTHESIS) && accept(this::expression) && accept(Terminal.CLOSE_PARENTHESIS) && accept(this::statementNoShortIf) && accept(Terminal.ELSE) && accept(this::statement));
-	}
-	private boolean ifThenElseStatementNoShortIf() {
-		return accept(NonTerminal.IF_THEN_ELSE_STATEMENT_NO_SHORT_IF,
-			() -> accept(Terminal.IF) && accept(Terminal.OPEN_PARENTHESIS) && accept(this::expression) && accept(Terminal.CLOSE_PARENTHESIS) && accept(this::statementNoShortIf) && accept(Terminal.ELSE) && accept(this::statementNoShortIf));
-	}
-	private boolean assertStatement() {
-		return accept(NonTerminal.ASSERT_STATEMENT,
-			() -> accept(Terminal.ASSERT) && accept(this::expression) && accept(Terminal.SEMICOLON),
-			() -> accept(Terminal.ASSERT) && accept(this::expression) && accept(Terminal.COLON) && accept(this::expression) && accept(Terminal.SEMICOLON));
-	}
-	private boolean switchStatement() {
-		return accept(NonTerminal.SWITCH_STATEMENT,
-			() -> accept(Terminal.SWITCH) && accept(Terminal.OPEN_PARENTHESIS) && accept(this::expression) && accept(Terminal.CLOSE_PARENTHESIS) && accept(this::switchBlock));
-	}
-	private boolean switchBlock() {
-		return accept(NonTerminal.SWITCH_BLOCK,
-			() -> accept(Terminal.OPEN_BRACE) && acceptRepeating(this::switchBlockStatementGroup) && acceptRepeating(this::switchLabel) && accept(Terminal.CLOSE_BRACE));
-	}
-	private boolean switchBlockStatementGroup() {
-		return accept(NonTerminal.SWITCH_BLOCK_STATEMENT_GROUP,
-			() -> accept(this::switchLabels) && accept(this::blockStatements));
-	}
-	private boolean switchLabels() {
-		return accept(NonTerminal.SWITCH_LABELS,
-			() -> accept(this::switchLabel) && acceptRepeating(this::switchLabel));
-	}
-	private boolean switchLabel() {
-		return accept(NonTerminal.SWITCH_LABEL,
-			() -> accept(Terminal.CASE) && accept(this::constantExpression) && accept(Terminal.COLON),
-			() -> accept(Terminal.CASE) && accept(this::enumConstantName) && accept(Terminal.COLON),
-			() -> accept(Terminal.DEFAULT) && accept(Terminal.COLON));
-	}
-	private boolean enumConstantName() {
-		return accept(NonTerminal.ENUM_CONSTANT_NAME,
-			() -> accept(this::identifier));
-	}
-	private boolean whileStatement() {
-		return accept(NonTerminal.WHILE_STATEMENT,
-			() -> accept(Terminal.WHILE) && accept(Terminal.OPEN_PARENTHESIS) && accept(this::expression) && accept(Terminal.CLOSE_PARENTHESIS) && accept(this::statement));
-	}
-	private boolean whileStatementNoShortIf() {
-		return accept(NonTerminal.WHILE_STATEMENT_NO_SHORT_IF,
-			() -> accept(Terminal.WHILE) && accept(Terminal.OPEN_PARENTHESIS) && accept(this::expression) && accept(Terminal.CLOSE_PARENTHESIS) && accept(this::statementNoShortIf));
-	}
-	private boolean doStatement() {
-		return accept(NonTerminal.DO_STATEMENT,
-			() -> accept(Terminal.DO) && accept(this::statement) && accept(Terminal.WHILE) && accept(Terminal.OPEN_PARENTHESIS) && accept(this::expression) && accept(Terminal.CLOSE_PARENTHESIS) && accept(Terminal.SEMICOLON));
-	}
-	private boolean forStatement() {
-		return accept(NonTerminal.FOR_STATEMENT,
-			() -> accept(this::basicForStatement),
-			() -> accept(this::enhancedForStatement));
-	}
-	private boolean forStatementNoShortIf() {
-		return accept(NonTerminal.FOR_STATEMENT_NO_SHORT_IF,
-			() -> accept(this::basicForStatementNoShortIf),
-			() -> accept(this::enhancedForStatementNoShortIf));
-	}
-	private boolean basicForStatement() {
-		return accept(NonTerminal.BASIC_FOR_STATEMENT,
-			() -> accept(Terminal.FOR) && accept(Terminal.OPEN_PARENTHESIS) && acceptOptional(this::forInit) && accept(Terminal.SEMICOLON) && acceptOptional(this::expression) && accept(Terminal.SEMICOLON) && acceptOptional(this::forUpdate) && accept(Terminal.CLOSE_PARENTHESIS) && accept(this::statement));
-	}
-	private boolean basicForStatementNoShortIf() {
-		return accept(NonTerminal.BASIC_FOR_STATEMENT_NO_SHORT_IF,
-			() -> accept(Terminal.FOR) && accept(Terminal.OPEN_PARENTHESIS) && acceptOptional(this::forInit) && accept(Terminal.SEMICOLON) && acceptOptional(this::expression) && accept(Terminal.SEMICOLON) && acceptOptional(this::forUpdate) && accept(Terminal.CLOSE_PARENTHESIS) && accept(this::statementNoShortIf));
-	}
-	private boolean forInit() {
-		return accept(NonTerminal.FOR_INIT,
-			() -> accept(this::statementExpressionList),
-			() -> accept(this::localVariableDeclaration));
-	}
-	private boolean forUpdate() {
-		return accept(NonTerminal.FOR_UPDATE,
-			() -> accept(this::statementExpressionList));
-	}
-	private boolean statementExpressionList() {
-		return accept(NonTerminal.STATEMENT_EXPRESSION_LIST,
-			() -> accept(this::statementExpression) && acceptRepeating(() -> accept(Terminal.COMMA) && accept(this::statementExpression)));
-	}
-	private boolean enhancedForStatement() {
-		return accept(NonTerminal.ENHANCED_FOR_STATEMENT,
-			() -> accept(Terminal.FOR) && accept(Terminal.OPEN_PARENTHESIS) && acceptRepeating(this::variableModifier) && accept(this::unannType) && accept(this::variableDeclaratorId) && accept(Terminal.COLON) && accept(this::expression) && accept(Terminal.CLOSE_PARENTHESIS) && accept(this::statement));
-	}
-	private boolean enhancedForStatementNoShortIf() {
-		return accept(NonTerminal.ENHANCED_FOR_STATEMENT_NO_SHORT_IF,
-			() -> accept(Terminal.FOR) && accept(Terminal.OPEN_PARENTHESIS) && acceptRepeating(this::variableModifier) && accept(this::unannType) && accept(this::variableDeclaratorId) && accept(Terminal.COLON) && accept(this::expression) && accept(Terminal.CLOSE_PARENTHESIS) && accept(this::statementNoShortIf));
-	}
-	private boolean breakStatement() {
-		return accept(NonTerminal.BREAK_STATEMENT,
-			() -> accept(Terminal.BREAK) && acceptOptional(this::identifier) && accept(Terminal.SEMICOLON));
-	}
-	private boolean continueStatement() {
-		return accept(NonTerminal.CONTINUE_STATEMENT,
-			() -> accept(Terminal.CONTINUE) && acceptOptional(this::identifier) && accept(Terminal.SEMICOLON));
-	}
-	private boolean returnStatement() {
-		return accept(NonTerminal.RETURN_STATEMENT,
-			() -> accept(Terminal.RETURN) && acceptOptional(this::expression) && accept(Terminal.SEMICOLON));
-	}
-	private boolean throwStatement() {
-		return accept(NonTerminal.THROW_STATEMENT,
-			() -> accept(Terminal.THROW) && accept(this::expression) && accept(Terminal.SEMICOLON));
-	}
-	private boolean synchronizedStatement() {
-		return accept(NonTerminal.SYNCHRONIZED_STATEMENT,
-			() -> accept(Terminal.SYNCHRONIZED) && accept(Terminal.OPEN_PARENTHESIS) && accept(this::expression) && accept(Terminal.CLOSE_PARENTHESIS) && accept(this::block));
-	}
-	private boolean tryStatement() {
-		return accept(NonTerminal.TRY_STATEMENT,
-			() -> accept(Terminal.TRY) && accept(this::block) && accept(this::catches),
-			() -> accept(Terminal.TRY) && accept(this::block) && acceptOptional(this::catches) && accept(this::finally_),
-			() -> accept(this::tryWithResourcesStatement));
-	}
-	private boolean catches() {
-		return accept(NonTerminal.CATCHES,
-			() -> accept(this::catchClause) && acceptRepeating(this::catchClause));
-	}
-	private boolean catchClause() {
-		return accept(NonTerminal.CATCH_CLAUSE,
-			() -> accept(Terminal.CATCH) && accept(Terminal.OPEN_PARENTHESIS) && accept(this::catchFormalParameter) && accept(Terminal.CLOSE_PARENTHESIS) && accept(this::block));
-	}
-	private boolean catchFormalParameter() {
-		return accept(NonTerminal.CATCH_FORMAL_PARAMETER,
-			() -> acceptRepeating(this::variableModifier) && accept(this::catchType) && accept(this::variableDeclaratorId));
-	}
-	private boolean catchType() {
-		return accept(NonTerminal.CATCH_TYPE,
-			() -> accept(this::unannClassType) && acceptRepeating(() -> accept(Terminal.OR) && accept(this::classType)));
-	}
-	private boolean finally_() {
-		return accept(NonTerminal.FINALLY,
-			() -> accept(Terminal.FINALLY) && accept(this::block));
-	}
-	private boolean tryWithResourcesStatement() {
-		return accept(NonTerminal.TRY_WITH_RESOURCES_STATEMENT,
-			() -> accept(Terminal.TRY) && accept(this::resourceSpecification) && accept(this::block) && acceptOptional(this::catches) && acceptOptional(this::finally_));
-	}
-	private boolean resourceSpecification() {
-		return accept(NonTerminal.RESOURCE_SPECIFICATION,
-			() -> accept(Terminal.OPEN_PARENTHESIS) && accept(this::resourceList) && acceptOptional(Terminal.SEMICOLON) && accept(Terminal.CLOSE_PARENTHESIS));
-	}
-	private boolean resourceList() {
-		return accept(NonTerminal.RESOURCE_LIST,
-			() -> accept(this::resource) && acceptRepeating(() -> accept(Terminal.SEMICOLON) && accept(this::resource)));
-	}
-	private boolean resource() {
-		return accept(NonTerminal.RESOURCE,
-			() -> acceptRepeating(this::variableModifier) && accept(this::unannType) && accept(this::variableDeclaratorId) && accept(Terminal.ASSIGN) && accept(this::expression));
-	}
-	private boolean primary() {
-		return accept(NonTerminal.PRIMARY,
-			() -> accept(this::primaryNoNewArray),
-			() -> accept(this::arrayCreationExpression));
-	}
-	private boolean primaryNoNewArray() {
-		return accept(NonTerminal.PRIMARY_NO_NEW_ARRAY,
-			() -> accept(this::literal),
-			() -> accept(this::classLiteral),
-			() -> accept(Terminal.THIS),
-			() -> accept(this::typeName) && accept(Terminal.DOT) && accept(Terminal.THIS),
-			() -> accept(Terminal.OPEN_PARENTHESIS) && accept(this::expression) && accept(Terminal.CLOSE_PARENTHESIS)
-//			() -> accept(this::classInstanceCreationExpression),
-//			() -> accept(this::fieldAccess),
-//			() -> accept(this::arrayAccess),
-//			() -> accept(this::methodInvocation),
-//			() -> accept(this::methodReference)
-			);
-	}
-	private boolean classLiteral() {
-		return accept(NonTerminal.CLASS_LITERAL,
-			() -> accept(this::typeName) && acceptRepeating(() -> accept(Terminal.OPEN_BRACKET) && accept(Terminal.CLOSE_BRACKET)) && accept(Terminal.DOT) && accept(Terminal.CLASS),
-			() -> accept(this::numericType) && acceptRepeating(() -> accept(Terminal.OPEN_BRACKET) && accept(Terminal.CLOSE_BRACKET)) && accept(Terminal.DOT) && accept(Terminal.CLASS),
-			() -> accept(Terminal.BOOLEAN) && acceptRepeating(() -> accept(Terminal.OPEN_BRACKET) && accept(Terminal.CLOSE_BRACKET)) && accept(Terminal.DOT) && accept(Terminal.CLASS),
-			() -> accept(Terminal.VOID) && accept(Terminal.DOT) && accept(Terminal.CLASS));
-	}
-	private boolean classInstanceCreationExpression() {
-		return accept(NonTerminal.CLASS_INSTANCE_CREATION_EXPRESSION,
-			() -> accept(this::unqualifiedClassInstanceCreationExpression),
-			() -> accept(this::expressionName) && accept(Terminal.DOT) && accept(this::unqualifiedClassInstanceCreationExpression),
-			() -> accept(this::primary) && accept(Terminal.DOT) && accept(this::unqualifiedClassInstanceCreationExpression));
-	}
-	private boolean unqualifiedClassInstanceCreationExpression() {
-		return accept(NonTerminal.UNQUALIFIED_CLASS_INSTANCE_CREATION_EXPRESSION,
-			() -> accept(Terminal.NEW) && acceptOptional(this::typeArguments) && accept(this::classOrInterfaceTypeToInstantiate) && accept(Terminal.OPEN_PARENTHESIS) && acceptOptional(this::argumentList) && accept(Terminal.CLOSE_PARENTHESIS) && acceptOptional(this::classBody));
-	}
-	private boolean classOrInterfaceTypeToInstantiate() {
-		return accept(NonTerminal.CLASS_OR_INTERFACE_TYPE_TO_INSTANTIATE,
-			() -> acceptRepeating(this::annotation) && accept(this::identifier) && acceptRepeating(() -> accept(Terminal.DOT) && acceptRepeating(this::annotation) && accept(this::identifier)) && acceptOptional(this::typeArgumentsOrDiamond));
-	}
-	private boolean typeArgumentsOrDiamond() {
-		return accept(NonTerminal.TYPE_ARGUMENTS_OR_DIAMOND,
-			() -> accept(this::typeArguments),
-			() -> accept(Terminal.LESS_THAN) && accept(Terminal.GREATER_THAN));
-	}
-	private boolean fieldAccess() {
-		return accept(NonTerminal.FIELD_ACCESS,
-			() -> accept(this::primary) && accept(Terminal.DOT) && accept(this::identifier),
-			() -> accept(Terminal.SUPER) && accept(Terminal.DOT) && accept(this::identifier),
-			() -> accept(this::typeName) && accept(Terminal.DOT) && accept(Terminal.SUPER) && accept(Terminal.DOT) && accept(this::identifier));
-	}
-	private boolean arrayAccess() {
-		return accept(NonTerminal.ARRAY_ACCESS,
-			() -> accept(this::expressionName) && accept(Terminal.OPEN_BRACKET) && accept(this::expression) && accept(Terminal.CLOSE_BRACKET),
-			() -> accept(this::primaryNoNewArray) && accept(Terminal.OPEN_BRACKET) && accept(this::expression) && accept(Terminal.CLOSE_BRACKET));
-	}
-	private boolean methodInvocation() {
-		return accept(NonTerminal.METHOD_INVOCATION,
-			() -> accept(this::methodName) && accept(Terminal.OPEN_PARENTHESIS) && acceptOptional(this::argumentList) && accept(Terminal.CLOSE_PARENTHESIS),
-			() -> accept(this::typeName) && accept(Terminal.DOT) && acceptOptional(this::typeArguments) && accept(this::identifier) && accept(Terminal.OPEN_PARENTHESIS) && acceptOptional(this::argumentList) && accept(Terminal.CLOSE_PARENTHESIS),
-			() -> accept(this::expressionName) && accept(Terminal.DOT) && acceptOptional(this::typeArguments) && accept(this::identifier) && accept(Terminal.OPEN_PARENTHESIS) && acceptOptional(this::argumentList) && accept(Terminal.CLOSE_PARENTHESIS),
-			() -> accept(this::primary) && accept(Terminal.DOT) && acceptOptional(this::typeArguments) && accept(this::identifier) && accept(Terminal.OPEN_PARENTHESIS) && acceptOptional(this::argumentList) && accept(Terminal.CLOSE_PARENTHESIS),
-			() -> accept(Terminal.SUPER) && accept(Terminal.DOT) && acceptOptional(this::typeArguments) && accept(this::identifier) && accept(Terminal.OPEN_PARENTHESIS) && acceptOptional(this::argumentList) && accept(Terminal.CLOSE_PARENTHESIS),
-			() -> accept(this::typeName) && accept(Terminal.DOT) && accept(Terminal.SUPER) && accept(Terminal.DOT) && acceptOptional(this::typeArguments) && accept(this::identifier) && accept(Terminal.OPEN_PARENTHESIS) && acceptOptional(this::argumentList) && accept(Terminal.CLOSE_PARENTHESIS));
-	}
-	private boolean argumentList() {
-		return accept(NonTerminal.ARGUMENT_LIST,
-			() -> accept(this::expression) && acceptRepeating(() -> accept(Terminal.COMMA) && accept(this::expression)));
-	}
-	private boolean methodReference() {
-		return accept(NonTerminal.METHOD_REFERENCE,
-			() -> accept(this::expressionName) && accept(Terminal.DOUBLE_COLON) && acceptOptional(this::typeArguments) && accept(this::identifier),
-			() -> accept(this::referenceType) && accept(Terminal.DOUBLE_COLON) && acceptOptional(this::typeArguments) && accept(this::identifier),
-			() -> accept(this::primary) && accept(Terminal.DOUBLE_COLON) && acceptOptional(this::typeArguments) && accept(this::identifier),
-			() -> accept(Terminal.SUPER) && accept(Terminal.DOUBLE_COLON) && acceptOptional(this::typeArguments) && accept(this::identifier),
-			() -> accept(this::typeName) && accept(Terminal.DOT) && accept(Terminal.SUPER) && accept(Terminal.DOUBLE_COLON) && acceptOptional(this::typeArguments) && accept(this::identifier),
-			() -> accept(this::classType) && accept(Terminal.DOUBLE_COLON) && acceptOptional(this::typeArguments) && accept(Terminal.NEW),
-			() -> accept(this::arrayType) && accept(Terminal.DOUBLE_COLON) && accept(Terminal.NEW));
-	}
-	private boolean arrayCreationExpression() {
-		return accept(NonTerminal.ARRAY_CREATION_EXPRESSION,
-			() -> accept(Terminal.NEW) && accept(this::primitiveType) && accept(this::dimExprs) && acceptOptional(this::dims),
-			() -> accept(Terminal.NEW) && accept(this::classOrInterfaceType) && accept(this::dimExprs) && acceptOptional(this::dims),
-			() -> accept(Terminal.NEW) && accept(this::primitiveType) && accept(this::dims) && accept(this::arrayInitializer),
-			() -> accept(Terminal.NEW) && accept(this::classOrInterfaceType) && accept(this::dims) && accept(this::arrayInitializer));
-	}
-	private boolean dimExprs() {
-		return accept(NonTerminal.DIM_EXPRS,
-			() -> accept(this::dimExpr) && acceptRepeating(this::dimExpr));
-	}
-	private boolean dimExpr() {
-		return accept(NonTerminal.DIM_EXPR,
-			() -> acceptRepeating(this::annotation) && accept(Terminal.OPEN_BRACKET) && accept(this::expression) && accept(Terminal.CLOSE_BRACKET));
-	}
-	private boolean expression() {
-		return accept(NonTerminal.EXPRESSION,
-			() -> accept(this::lambdaExpression),
-			() -> accept(this::assignmentExpression));
-	}
-	private boolean lambdaExpression() {
-		return accept(NonTerminal.LAMBDA_EXPRESSION,
-			() -> accept(this::lambdaParameters) && accept(Terminal.LAMBDA) && accept(this::lambdaBody));
-	}
-	private boolean lambdaParameters() {
-		return accept(NonTerminal.LAMBDA_PARAMETERS,
-			() -> accept(this::identifier),
-			() -> accept(Terminal.OPEN_PARENTHESIS) && acceptOptional(this::formalParameterList) && accept(Terminal.CLOSE_PARENTHESIS),
-			() -> accept(Terminal.OPEN_PARENTHESIS) && accept(this::inferredFormalParameterList) && accept(Terminal.CLOSE_PARENTHESIS));
-	}
-	private boolean inferredFormalParameterList() {
-		return accept(NonTerminal.INFERRED_FORMAL_PARAMETER_LIST,
-			() -> accept(this::identifier) && acceptRepeating(() -> accept(Terminal.COMMA) && accept(this::identifier)));
-	}
-	private boolean lambdaBody() {
-		return accept(NonTerminal.LAMBDA_BODY,
-			() -> accept(this::expression),
-			() -> accept(this::block));
-	}
-	private boolean assignmentExpression() {
-		return accept(NonTerminal.ASSIGNMENT_EXPRESSION,
-			() -> accept(this::conditionalExpression),
-			() -> accept(this::assignment));
-	}
-	private boolean assignment() {
-		return accept(NonTerminal.ASSIGNMENT,
-			() -> accept(this::leftHandSide) && accept(this::assignmentOperator) && accept(this::expression));
-	}
-	private boolean leftHandSide() {
-		return accept(NonTerminal.LEFT_HAND_SIDE,
-			() -> accept(this::expressionName),
-			() -> accept(this::fieldAccess),
-			() -> accept(this::arrayAccess));
-	}
-	private boolean conditionalExpression() {
-		return accept(NonTerminal.CONDITIONAL_EXPRESSION,
-			() -> accept(this::conditionalOrExpression),
-			() -> accept(this::conditionalOrExpression) && accept(Terminal.TERNARY) && accept(this::expression) && accept(Terminal.COLON) && accept(this::conditionalExpression),
-			() -> accept(this::conditionalOrExpression) && accept(Terminal.TERNARY) && accept(this::expression) && accept(Terminal.COLON) && accept(this::lambdaExpression));
-	}
-	private boolean conditionalOrExpression() {
-//		return accept(NonTerminal.CONDITIONAL_OR_EXPRESSION,
-//			() -> accept(this::conditionalAndExpression),
-//			() -> accept(this::conditionalOrExpression) && accept(Terminal.OR_GATE) && accept(this::conditionalAndExpression));
-		return accept(NonTerminal.CONDITIONAL_OR_EXPRESSION,
-			() -> {
-				final NonTerminalAcceptor theRest = () -> accept(Terminal.OR_GATE) && accept(this::conditionalAndExpression);
-				final NonTerminalNode original = currentParent;
-				final boolean accepted = accept(this::conditionalAndExpression);
-				if (!accepted) return false;
-				original.addChild(currentParent);
-				while (true) {
-					final NonTerminalNode node1 = currentParent;
-					if (accept(theRest)) {
-						final NonTerminalNode node2 = currentParent;
-						currentParent = new NonTerminalNode(NonTerminal.CONDITIONAL_OR_EXPRESSION);
-						currentParent.addChildren(node1, node2);
-					} else break;
-				}
-				return true;
-			});
-	}
-	private boolean conditionalAndExpression() {
-//		return accept(NonTerminal.CONDITIONAL_AND_EXPRESSION,
-//			() -> accept(this::inclusiveOrExpression),
-//			() -> accept(this::conditionalAndExpression) && accept(Terminal.AND_GATE) && accept(this::inclusiveOrExpression));
-		return accept(NonTerminal.CONDITIONAL_AND_EXPRESSION,
-			() -> {
-				final NonTerminalAcceptor theRest = () -> accept(Terminal.AND_GATE) && accept(this::inclusiveOrExpression);
-				final NonTerminalNode original = currentParent;
-				final boolean accepted = accept(this::inclusiveOrExpression);
-				if (!accepted) return false;
-				original.addChild(currentParent);
-				while (true) {
-					final NonTerminalNode node1 = currentParent;
-					if (accept(theRest)) {
-						final NonTerminalNode node2 = currentParent;
-						currentParent = new NonTerminalNode(NonTerminal.CONDITIONAL_AND_EXPRESSION);
-						currentParent.addChildren(node1, node2);
-					} else break;
-				}
-				return true;
-			});
-	}
-	private boolean inclusiveOrExpression() {
-//		return accept(NonTerminal.INCLUSIVE_OR_EXPRESSION,
-//			() -> accept(this::exclusiveOrExpression),
-//			() -> accept(this::inclusiveOrExpression) && accept(Terminal.OR) && accept(this::exclusiveOrExpression));
-		return accept(NonTerminal.INCLUSIVE_OR_EXPRESSION,
-			() -> {
-				final NonTerminalAcceptor theRest = () -> accept(Terminal.OR) && accept(this::exclusiveOrExpression);
-				final NonTerminalNode original = currentParent;
-				final boolean accepted = accept(this::exclusiveOrExpression);
-				if (!accepted) return false;
-				original.addChild(currentParent);
-				while (true) {
-					final NonTerminalNode node1 = currentParent;
-					if (accept(theRest)) {
-						final NonTerminalNode node2 = currentParent;
-						currentParent = new NonTerminalNode(NonTerminal.INCLUSIVE_OR_EXPRESSION);
-						currentParent.addChildren(node1, node2);
-					} else break;
-				}
-				return true;
-			});
-	}
-	private boolean exclusiveOrExpression() {
-//		return accept(NonTerminal.EXCLUSIVE_OR_EXPRESSION,
-//			() -> accept(this::andExpression),
-//			() -> accept(this::exclusiveOrExpression) && accept(Terminal.XOR) && accept(this::andExpression));
-		return accept(NonTerminal.EXCLUSIVE_OR_EXPRESSION,
-			() -> {
-				final NonTerminalAcceptor theRest = () -> accept(Terminal.XOR) && accept(this::andExpression);
-				final NonTerminalNode original = currentParent;
-				final boolean accepted = accept(this::andExpression);
-				if (!accepted) return false;
-				original.addChild(currentParent);
-				while (true) {
-					final NonTerminalNode node1 = currentParent;
-					if (accept(theRest)) {
-						final NonTerminalNode node2 = currentParent;
-						currentParent = new NonTerminalNode(NonTerminal.EXCLUSIVE_OR_EXPRESSION);
-						currentParent.addChildren(node1, node2);
-					} else break;
-				}
-				return true;
-			});
-	}
-	private boolean andExpression() {
-//		return accept(NonTerminal.AND_EXPRESSION,
-//			() -> accept(this::equalityExpression),
-//			() -> accept(this::andExpression) && accept(Terminal.AND) && accept(this::equalityExpression));
-		return accept(NonTerminal.AND_EXPRESSION,
-			() -> {
-				final NonTerminalAcceptor theRest = () -> accept(Terminal.AND) && accept(this::equalityExpression);
-				final NonTerminalNode original = currentParent;
-				final boolean accepted = accept(this::equalityExpression);
-				if (!accepted) return false;
-				original.addChild(currentParent);
-				while (true) {
-					final NonTerminalNode node1 = currentParent;
-					if (accept(theRest)) {
-						final NonTerminalNode node2 = currentParent;
-						currentParent = new NonTerminalNode(NonTerminal.AND_EXPRESSION);
-						currentParent.addChildren(node1, node2);
-					} else break;
-				}
-				return true;
-			});
-	}
-	private boolean equalityExpression() {
-//		return accept(NonTerminal.EQUALITY_EXPRESSION,
-//			() -> accept(this::relationalExpression),
-//			() -> accept(this::equalityExpression) && accept(Terminal.EQUAL_TO) && accept(this::relationalExpression),
-//			() -> accept(this::equalityExpression) && accept(Terminal.NOT_EQUAL_TO) && accept(this::relationalExpression));
-		return accept(NonTerminal.EQUALITY_EXPRESSION,
-			() -> {
-				final NonTerminalAcceptor theRest = () ->
-					   accept(() -> accept(Terminal.EQUAL_TO) && accept(this::relationalExpression))
-					|| accept(() -> accept(Terminal.NOT_EQUAL_TO) && accept(this::relationalExpression));
-				final NonTerminalNode original = currentParent;
-				final boolean accepted = accept(this::relationalExpression);
-				if (!accepted) return false;
-				original.addChild(currentParent);
-				while (true) {
-					final NonTerminalNode node1 = currentParent;
-					if (accept(theRest)) {
-						final NonTerminalNode node2 = currentParent;
-						currentParent = new NonTerminalNode(NonTerminal.EQUALITY_EXPRESSION);
-						currentParent.addChildren(node1, node2);
-					} else break;
-				}
-				return true;
-			});
-	}
-	private boolean relationalExpression() {
-//		return accept(NonTerminal.RELATIONAL_EXPRESSION,
-//			() -> accept(this::shiftExpression),
-//			() -> accept(this::relationalExpression) && accept(Terminal.LESS_THAN) && accept(this::shiftExpression),
-//			() -> accept(this::relationalExpression) && accept(Terminal.GREATER_THAN) && accept(this::shiftExpression),
-//			() -> accept(this::relationalExpression) && accept(Terminal.LESS_THAN_OR_EQUAL_TO) && accept(this::shiftExpression),
-//			() -> accept(this::relationalExpression) && accept(Terminal.GREATER_THAN_OR_EQUAL_TO) && accept(this::shiftExpression),
-//			() -> accept(this::relationalExpression) && accept(Terminal.INSTANCEOF) && accept(this::referenceType));
-		return accept(NonTerminal.RELATIONAL_EXPRESSION,
-			() -> {
-				final NonTerminalAcceptor theRest = () ->
-					   accept(() -> accept(Terminal.LESS_THAN) && accept(this::shiftExpression))
-					|| accept(() -> accept(Terminal.GREATER_THAN) && accept(this::shiftExpression))
-					|| accept(() -> accept(Terminal.LESS_THAN_OR_EQUAL_TO) && accept(this::shiftExpression))
-					|| accept(() -> accept(Terminal.GREATER_THAN_OR_EQUAL_TO) && accept(this::shiftExpression))
-					|| accept(() -> accept(Terminal.INSTANCEOF) && accept(this::referenceType));
-				final NonTerminalNode original = currentParent;
-				final boolean accepted = accept(this::shiftExpression);
-				if (!accepted) return false;
-				original.addChild(currentParent);
-				while (true) {
-					final NonTerminalNode node1 = currentParent;
-					if (accept(theRest)) {
-						final NonTerminalNode node2 = currentParent;
-						currentParent = new NonTerminalNode(NonTerminal.RELATIONAL_EXPRESSION);
-						currentParent.addChildren(node1, node2);
-					} else break;
-				}
-				return true;
-			});
-	}
-	private boolean shiftExpression() {
-//		return accept(NonTerminal.SHIFT_EXPRESSION,
-//			() -> accept(this::additiveExpression),
-//			() -> accept(this::shiftExpression) && accept(Terminal.LEFT_SHIFT) && accept(this::additiveExpression),
-//			() -> accept(this::shiftExpression) && accept(Terminal.RIGHT_SHIFT) && accept(this::additiveExpression),
-//			() -> accept(this::shiftExpression) && accept(Terminal.UNSIGNED_RIGHT_SHIFT) && accept(this::additiveExpression));
-		return accept(NonTerminal.SHIFT_EXPRESSION,
-			() -> {
-				final NonTerminalAcceptor theRest = () ->
-					   accept(() -> accept(Terminal.LEFT_SHIFT) && accept(this::additiveExpression))
-					|| accept(() -> accept(Terminal.RIGHT_SHIFT) && accept(this::additiveExpression))
-					|| accept(() -> accept(Terminal.UNSIGNED_RIGHT_SHIFT) && accept(this::additiveExpression));
-				final NonTerminalNode root = currentParent;
-				final boolean accepted = accept(this::additiveExpression);
-				if (!accepted) return false;
-				root.addChild(currentParent);
-				while (true) {
-					final NonTerminalNode node1 = currentParent;
-					if (accept(theRest)) {
-						final NonTerminalNode node2 = currentParent;
-						currentParent = new NonTerminalNode(NonTerminal.SHIFT_EXPRESSION);
-						currentParent.addChildren(node1, node2);
-					} else break;
-				}
-				return true;
-			});
-	}
-	private boolean additiveExpression() {
-//		return accept(NonTerminal.ADDITIVE_EXPRESSION,
-//			() -> accept(this::multiplicativeExpression),
-//			() -> accept(this::additiveExpression) && accept(Terminal.ADD) && accept(this::multiplicativeExpression),
-//			() -> accept(this::additiveExpression) && accept(Terminal.SUBTRACT) && accept(this::multiplicativeExpression));
-		return accept(NonTerminal.ADDITIVE_EXPRESSION,
-			() -> {
-				final NonTerminalAcceptor theRest = () ->
-					   accept(() -> accept(Terminal.ADD) && accept(this::multiplicativeExpression))
-					|| accept(() -> accept(Terminal.SUBTRACT) && accept(this::multiplicativeExpression));
-				final NonTerminalNode root = currentParent;
-				final boolean accepted = accept(this::multiplicativeExpression);
-				if (!accepted) return false;
-				root.addChild(currentParent);
-				while (true) {
-					final NonTerminalNode node1 = currentParent;
-					if (accept(theRest)) {
-						final NonTerminalNode node2 = currentParent;
-						currentParent = new NonTerminalNode(NonTerminal.ADDITIVE_EXPRESSION);
-						currentParent.addChildren(node1, node2);
-					} else break;
-				}
-				return true;
-			});
-	}
-	private boolean multiplicativeExpression() {
-//		return accept(NonTerminal.MULTIPLICATIVE_EXPRESSION,
-//			() -> accept(this::unaryExpression),
-//			() -> accept(this::multiplicativeExpression) && accept(Terminal.MULTIPLY) && accept(this::unaryExpression),
-//			() -> accept(this::multiplicativeExpression) && accept(Terminal.DIVIDE) && accept(this::unaryExpression),
-//			() -> accept(this::multiplicativeExpression) && accept(Terminal.MODULO) && accept(this::unaryExpression));
-		return accept(NonTerminal.MULTIPLICATIVE_EXPRESSION,
-			() -> {
-				if (!accept(this::unaryExpression))
-					return false;
-				return true;
-//				final NonTerminalAcceptor theRest = () ->
-//					   accept(() -> accept(Terminal.MULTIPLY) && accept(this::unaryExpression))
-//					|| accept(() -> accept(Terminal.DIVIDE) && accept(this::unaryExpression))
-//					|| accept(() -> accept(Terminal.MODULO) && accept(this::unaryExpression));
-//				final NonTerminalNode root = currentParent;
-//				final boolean accepted = accept(this::unaryExpression);
-//				if (!accepted) return false;
-//				root.addChild(currentParent);
-//				while (true) {
-//					final NonTerminalNode node1 = currentParent;
-//					if (accept(theRest)) {
-//						final NonTerminalNode node2 = currentParent;
-//						currentParent = new NonTerminalNode(NonTerminal.MULTIPLICATIVE_EXPRESSION);
-//						currentParent.addChildren(node1, node2);
-//					} else break;
-//				}
-//				return true;
-			});
-	}
-	private boolean unaryExpression() {
-		return accept(NonTerminal.UNARY_EXPRESSION,
-			() -> accept(this::preIncrementExpression),
-			() -> accept(this::preDecrementExpression),
-			() -> accept(Terminal.ADD) && accept(this::unaryExpression),
-			() -> accept(Terminal.SUBTRACT) && accept(this::unaryExpression),
-			() -> accept(this::unaryExpressionNotPlusMinus));
-	}
-	private boolean preIncrementExpression() {
-		return accept(NonTerminal.PRE_INCREMENT_EXPRESSION,
-			() -> accept(Terminal.INCREMENT) && accept(this::unaryExpression));
-	}
-	private boolean preDecrementExpression() {
-		return accept(NonTerminal.PRE_DECREMENT_EXPRESSION,
-			() -> accept(Terminal.DECREMENT) && accept(this::unaryExpression));
-	}
-	private boolean unaryExpressionNotPlusMinus() {
-		return accept(NonTerminal.UNARY_EXPRESSION_NOT_PLUS_MINUS,
-			() -> accept(this::postfixExpression),
-			() -> accept(Terminal.BITWISE_COMPLEMENT) && accept(this::unaryExpression),
-			() -> accept(Terminal.NOT) && accept(this::unaryExpression),
-			() -> accept(this::castExpression));
-	}
-	private boolean postfixExpression() {
-		return accept(NonTerminal.POSTFIX_EXPRESSION,
-			() -> accept(this::primary),
-			() -> accept(this::expressionName)
-		//	() -> accept(this::postIncrementExpression),
-		//	() -> accept(this::postDecrementExpression)
-		);
-	}
-	private boolean postIncrementExpression() {
-		return accept(NonTerminal.POST_INCREMENT_EXPRESSION,
-			() -> accept(this::postfixExpression) && accept(Terminal.INCREMENT));
-	}
-	private boolean postDecrementExpression() {
-		return accept(NonTerminal.POST_DECREMENT_EXPRESSION,
-			() -> accept(this::postfixExpression) && accept(Terminal.DECREMENT));
-	}
-	private boolean castExpression() {
-		return accept(NonTerminal.CAST_EXPRESSION,
-			() -> accept(Terminal.OPEN_PARENTHESIS) && accept(this::primitiveType) && accept(Terminal.CLOSE_PARENTHESIS) && accept(this::unaryExpression),
-			() -> accept(Terminal.OPEN_PARENTHESIS) && accept(this::referenceType) && acceptRepeating(this::additionalBound) && accept(Terminal.CLOSE_PARENTHESIS) && accept(this::unaryExpressionNotPlusMinus),
-			() -> accept(Terminal.OPEN_PARENTHESIS) && accept(this::referenceType) && acceptRepeating(this::additionalBound) && accept(Terminal.CLOSE_PARENTHESIS) && accept(this::lambdaExpression));
-	}
-	private boolean constantExpression() {
-		return accept(NonTerminal.CONSTANT_EXPRESSION,
-			() -> accept(this::expression));
-	}
-}
+//		if (acceptedAny)
+//			currentParentAtStart.addChild(currentParent);
+//		currentParent = currentParentAtStart;
+//		return acceptedAny;
+//	}
+//	private boolean accept(Nonterminal value, NonterminalAcceptor... nonTerminals) {
+//		System.out.println("NONTERMINAL: " + value);
+//		final TreeItem<String> oldCurrent = debugCurrent, thisRoot = newCurrent(value.toString());
+//
+//		final NonterminalNode parentAtStart = currentParent;
+//
+//		currentParent = new NonterminalNode(value);
+//
+//		boolean acceptedAny = false;
+//		int n = 0, k = nonTerminals.length;
+//		for (NonterminalAcceptor acceptor : nonTerminals) {
+//			TreeItem<String> x = debugCurrent = addMessage(thisRoot, "option " + ++n + " of " + k + " | currentToken = \"" + currentToken.getText() + "\"");
+//
+//			final boolean acceptedThis = accept(acceptor);
+//
+//			$(x, acceptedThis);
+//
+//			if (acceptedThis) {
+//				acceptedAny = true;
+//			}
+//		}
+//
+//		final boolean accepted = acceptedAny;
+//		if (accepted)
+//			parentAtStart.addChild(currentParent);
+//		currentParent = parentAtStart;
+//
+//		$(thisRoot, accepted);
+//		debugCurrent = oldCurrent;
+//
+//		return accepted;
+//	}
+//	private boolean acceptAny(NonterminalAcceptor... acceptors) {
+//		for (NonterminalAcceptor acceptor : acceptors)
+//			if (accept(acceptor)) return true;
+//		return false;
+//	}
+//	private boolean acceptAll(NonterminalAcceptor... acceptors) {
+//		for (NonterminalAcceptor acceptor : acceptors)
+//			if (!accept(acceptor)) return false;
+//		return true;
+//	}
+//	private boolean accept(Terminal terminal) {
+//		System.out.println("   TERMINAL: " + terminal);
+//		final String text = currentToken.getText();
+//		final boolean accepted = acceptAppendAdvance(currentToken.getValue() == terminal);
+//		TreeItem<String> newTreeItem = addMessage("TERMINAL: " + terminal.toString());
+//		$(newTreeItem, accepted, text);
+//		return accepted;
+//	}
+//	private boolean accept(NonterminalAcceptor nonterminal) {
+//		System.out.println("ACCEPT");
+//		final TreeItem<String> oldCurrent = debugCurrent, newCurrent = newCurrent("ACCEPT");
+//		final boolean parsingAtStart = parsing;
+//		final int indexAtStart = currentIndex;
+//		final NonterminalNode parentAtStart = currentParent;
+//		final Token tokenAtStart = currentToken;
+//		final boolean accepted = nonterminal.accept();
+//		if (!accepted) {
+//			parsing = parsingAtStart;
+//			currentIndex = indexAtStart;
+//			currentParent = parentAtStart;
+//			currentToken = tokenAtStart;
+//		}
+//		if (newCurrent.getChildren().size() == 1) {
+//			if (oldCurrent != null) {
+//				oldCurrent.getChildren().remove(oldCurrent.getChildren().size() - 1);
+//				oldCurrent.getChildren().add(newCurrent.getChildren().get(0));
+//			}
+//		} else {
+//			$(newCurrent, accepted);
+//		}
+//		debugCurrent = oldCurrent;
+//		return accepted;
+//	}
+//	private boolean acceptRepeating(NonterminalAcceptor acceptor) {
+//		System.out.println("ACCEPT REPEATING");
+//		final TreeItem<String> oldCurrent = debugCurrent, newCurrent = newCurrent("ACCEPT REPEATING");
+//
+//		int n = 0;
+//		while (true)
+//			if (accept(acceptor)) n++; else break;
+//
+//		$(newCurrent, n > 0);
+//		debugCurrent = oldCurrent;
+//
+//		return true;
+//	}
+//	private boolean acceptRepeating(Terminal value) {
+//		final TreeItem<String> oldCurrent = debugCurrent, newCurrent = newCurrent("ACCEPT REPEATING");
+//
+//		int n = 0;
+//		while (true)
+//			if (accept(value)) n++; else break;
+//
+//		$(newCurrent, n > 0);
+//		debugCurrent = oldCurrent;
+//
+//		return true;
+//	}
+//	private boolean acceptOptional(NonterminalAcceptor nonterminal) {
+//		System.out.println("ACCEPT OPTIONAL");
+//		final TreeItem<String> oldCurrent = debugCurrent, newCurrent = newCurrent("ACCEPT OPTIONAL");
+//		final boolean accepted = accept(nonterminal);
+//		if (newCurrent.getChildren().size() == 1) {
+//			final TreeItem<String> child = newCurrent.getChildren().get(0);
+//			child.setValue(new StringBuilder(child.getValue()).insert(1, '[').append(']').toString());
+//			oldCurrent.getChildren().set(oldCurrent.getChildren().size() - 1, child);
+//		} else $(newCurrent, accepted);
+//		debugCurrent = oldCurrent;
+//		return true;
+//	}
+//	private boolean acceptOptional(Terminal value) {
+//		final TreeItem<String> oldCurrent = debugCurrent, newCurrent = newCurrent("ACCEPT OPTIONAL");
+//		final boolean accepted = accept(value);
+//		if (newCurrent.getChildren().size() == 1) {
+//			final TreeItem<String> child = newCurrent.getChildren().get(0);
+//			child.setValue(new StringBuilder(child.getValue()).insert(2, '[').append(']').toString());
+//			oldCurrent.getChildren().set(oldCurrent.getChildren().size() - 1, child);
+//		} else $(newCurrent, accepted);
+//		debugCurrent = oldCurrent;
+//		return true;
+//	}
+//	private void start() {
+//		currentParent = root;
+//		currentIndex = -1;
+//		advance();
+//	}
+//	private void advance() {
+//		currentToken = (parsing = ++currentIndex < tokens.size()) ? tokens.get(currentIndex) : new Token(null);
+//	}
+//	private boolean acceptAppendAdvance(boolean accepted) {
+//		if (accepted &= parsing) {
+//			currentParent.addChild(new TerminalNode(currentToken));
+//			advance();
+//		}
+//		return accepted;
+//	}
+//
+//	private boolean type() {
+//		return accept(Nonterminal.TYPE, () -> acceptAny(this::primitiveType, this::referenceType));
+//	}
+//	private boolean primitiveType() {
+//		return accept(Nonterminal.PRIMITIVE_TYPE, () -> acceptAny(() -> acceptAll(() -> acceptRepeating(this::annotation), this::numericType), () -> acceptAll(() -> acceptRepeating(this::annotation), () -> accept(Terminal.BOOLEAN))));
+//	}
+//	private boolean numericType() {
+//		return accept(Nonterminal.NUMERIC_TYPE, () -> acceptAny(this::integralType, this::floatingPointType));
+//	}
+//	private boolean integralType() {
+//		return accept(Nonterminal.INTEGRAL_TYPE, () -> acceptAny(() -> accept(Terminal.BYTE), () -> accept(Terminal.SHORT), () -> accept(Terminal.INT), () -> accept(Terminal.LONG), () -> accept(Terminal.CHAR)));
+//	}
+//	private boolean floatingPointType() {
+//		return accept(Nonterminal.FLOATING_POINT_TYPE, () -> acceptAny(() -> accept(Terminal.FLOAT), () -> accept(Terminal.DOUBLE)));
+//	}
+//	private boolean referenceType() {
+//		return accept(Nonterminal.REFERENCE_TYPE, () -> acceptAny(this::arrayType, this::classOrInterfaceType, this::typeVariable));
+//	}
+//	private boolean classOrInterfaceType() {
+//		return accept(Nonterminal.CLASS_OR_INTERFACE_TYPE, () -> acceptAny(this::classType, this::interfaceType));
+//	}
+//	private boolean classType() {
+//		return accept(Nonterminal.CLASS_TYPE, () -> acceptAny(() -> acceptAll(() -> acceptRepeating(this::annotation), this::identifier, () -> acceptOptional(this::typeArguments)), () -> acceptAll(this::classOrInterfaceType, () -> accept(Terminal.DOT), () -> acceptRepeating(this::annotation), this::identifier, () -> acceptOptional(this::typeArguments))));
+//	}
+//	private boolean interfaceType() {
+//		return accept(Nonterminal.INTERFACE_TYPE, this::classType);
+//	}
+//	private boolean typeVariable() {
+//		return accept(Nonterminal.TYPE_VARIABLE, () -> acceptAll(() -> acceptRepeating(this::annotation), this::identifier));
+//	}
+//	private boolean arrayType() {
+//		return accept(Nonterminal.ARRAY_TYPE, () -> acceptAny(() -> acceptAll(this::primitiveType, this::dims), () -> acceptAll(this::classType, this::dims), () -> acceptAll(this::typeVariable, this::dims)));
+//	}
+//	private boolean dims() {
+//		return accept(Nonterminal.DIMS, () -> acceptAll(() -> acceptRepeating(this::annotation), () -> accept(Terminal.OPEN_BRACKET), () -> accept(Terminal.CLOSE_BRACKET), () -> acceptRepeating(() -> acceptAll(() -> acceptRepeating(this::annotation), () -> accept(Terminal.OPEN_BRACKET), () -> accept(Terminal.CLOSE_BRACKET)))));
+//	}
+//	private boolean typeParameter() {
+//		return accept(Nonterminal.TYPE_PARAMETER, () -> acceptAll(() -> acceptRepeating(this::typeParameterModifier), this::identifier, () -> acceptOptional(this::typeBound)));
+//	}
+//	private boolean typeParameterModifier() {
+//		return accept(Nonterminal.TYPE_PARAMETER_MODIFIER, this::annotation);
+//	}
+//	private boolean typeBound() {
+//		return accept(Nonterminal.TYPE_BOUND, () -> acceptAny(() -> acceptAll(() -> accept(Terminal.EXTENDS), this::typeVariable), () -> acceptAll(() -> accept(Terminal.EXTENDS), this::classOrInterfaceType, () -> acceptRepeating(this::additionalBound))));
+//	}
+//	private boolean additionalBound() {
+//		return accept(Nonterminal.ADDITIONAL_BOUND, () -> acceptAll(() -> accept(Terminal.AND), this::interfaceType));
+//	}
+//	private boolean typeArguments() {
+//		return accept(Nonterminal.TYPE_ARGUMENTS, () -> acceptAll(() -> accept(Terminal.LESS_THAN), this::typeArgumentList, () -> accept(Terminal.GREATER_THAN)));
+//	}
+//	private boolean typeArgumentList() {
+//		return accept(Nonterminal.TYPE_ARGUMENT_LIST, () -> acceptAll(this::typeArgument, () -> acceptRepeating(() -> acceptAll(() -> accept(Terminal.COMMA), this::typeArgument))));
+//	}
+//	private boolean typeArgument() {
+//		return accept(Nonterminal.TYPE_ARGUMENT, () -> acceptAny(this::referenceType, this::wildcard));
+//	}
+//	private boolean wildcard() {
+//		return accept(Nonterminal.WILDCARD, () -> acceptAll(() -> acceptRepeating(this::annotation), () -> accept(Terminal.TERNARY), () -> acceptOptional(this::wildcardBounds)));
+//	}
+//	private boolean wildcardBounds() {
+//		return accept(Nonterminal.WILDCARD_BOUNDS, () -> acceptAny(() -> acceptAll(() -> accept(Terminal.EXTENDS), this::referenceType), () -> acceptAll(() -> accept(Terminal.SUPER), this::referenceType)));
+//	}
+//	private boolean packageName() {
+//		return accept(Nonterminal.PACKAGE_NAME, () -> acceptAll(this::identifier, () -> acceptRepeating(() -> acceptAll(() -> accept(Terminal.DOT), this::identifier))));
+//	}
+//	private boolean typeName() {
+//		return accept(Nonterminal.TYPE_NAME, () -> acceptAll(this::identifier, () -> acceptRepeating(() -> acceptAll(() -> accept(Terminal.DOT), this::identifier))));
+//	}
+//	private boolean packageOrTypeName() {
+//		return accept(Nonterminal.PACKAGE_OR_TYPE_NAME, () -> acceptAll(this::identifier, () -> acceptRepeating(() -> acceptAll(() -> accept(Terminal.DOT), this::identifier))));
+//	}
+//	private boolean expressionName() {
+//		return accept(Nonterminal.EXPRESSION_NAME, () -> acceptAll(this::identifier, () -> acceptRepeating(() -> acceptAll(() -> accept(Terminal.DOT), this::identifier))));
+//	}
+//	private boolean methodName() {
+//		return accept(Nonterminal.METHOD_NAME, this::identifier);
+//	}
+//	private boolean ambiguousName() {
+//		return accept(Nonterminal.AMBIGUOUS_NAME, () -> acceptAll(this::identifier, () -> acceptRepeating(() -> acceptAll(() -> accept(Terminal.DOT), this::identifier))));
+//	}
+//	private boolean compilationUnit() {
+//		return accept(Nonterminal.COMPILATION_UNIT, () -> acceptAll(() -> acceptOptional(this::packageDeclaration), () -> acceptRepeating(this::importDeclaration), () -> acceptRepeating(this::typeDeclaration)));
+//	}
+//	private boolean packageDeclaration() {
+//		return accept(Nonterminal.PACKAGE_DECLARATION, () -> acceptAll(() -> acceptRepeating(this::packageModifier), () -> accept(Terminal.PACKAGE), this::identifier, () -> acceptRepeating(() -> acceptAll(() -> accept(Terminal.DOT), this::identifier))));
+//	}
+//	private boolean packageModifier() {
+//		return accept(Nonterminal.PACKAGE_MODIFIER, this::annotation);
+//	}
+//	private boolean importDeclaration() {
+//		return accept(Nonterminal.IMPORT_DECLARATION, () -> acceptAny(this::singleTypeImportDeclaration, this::typeImportOnDemandDeclaration, this::singleStaticImportDeclaration, this::staticImportOnDemandDeclaration));
+//	}
+//	private boolean singleTypeImportDeclaration() {
+//		return accept(Nonterminal.SINGLE_TYPE_IMPORT_DECLARATION, () -> acceptAll(() -> accept(Terminal.IMPORT), this::typeName, () -> accept(Terminal.SEMICOLON)));
+//	}
+//	private boolean typeImportOnDemandDeclaration() {
+//		return accept(Nonterminal.TYPE_IMPORT_ON_DEMAND_DECLARATION, () -> acceptAll(() -> accept(Terminal.IMPORT), this::packageOrTypeName, () -> accept(Terminal.DOT), () -> accept(Terminal.MULTIPLY), () -> accept(Terminal.SEMICOLON)));
+//	}
+//	private boolean singleStaticImportDeclaration() {
+//		return accept(Nonterminal.SINGLE_STATIC_IMPORT_DECLARATION, () -> acceptAll(() -> accept(Terminal.IMPORT), () -> accept(Terminal.STATIC), this::typeName, () -> accept(Terminal.DOT), this::identifier, () -> accept(Terminal.SEMICOLON)));
+//	}
+//	private boolean staticImportOnDemandDeclaration() {
+//		return accept(Nonterminal.STATIC_IMPORT_ON_DEMAND_DECLARATION, () -> acceptAll(() -> accept(Terminal.IMPORT), () -> accept(Terminal.STATIC), this::typeName, () -> accept(Terminal.DOT), () -> accept(Terminal.MULTIPLY), () -> accept(Terminal.SEMICOLON)));
+//	}
+//	private boolean typeDeclaration() {
+//		return accept(Nonterminal.TYPE_DECLARATION, () -> acceptAny(this::classDeclaration, this::interfaceDeclaration, () -> accept(Terminal.SEMICOLON)));
+//	}
+//	private boolean classDeclaration() {
+//		return accept(Nonterminal.CLASS_DECLARATION, () -> acceptAny(this::normalClassDeclaration, this::enumDeclaration));
+//	}
+//	private boolean normalClassDeclaration() {
+//		return accept(Nonterminal.NORMAL_CLASS_DECLARATION, () -> acceptAll(() -> acceptRepeating(this::classModifier), () -> accept(Terminal.CLASS), this::identifier, () -> acceptOptional(this::typeParameters), () -> acceptOptional(this::superclass), () -> acceptOptional(this::superinterfaces), this::classBody));
+//	}
+//	private boolean classModifier() {
+//		return accept(Nonterminal.CLASS_MODIFIER, () -> acceptAny(this::annotation, () -> accept(Terminal.PUBLIC), () -> accept(Terminal.PROTECTED), () -> accept(Terminal.PRIVATE), () -> accept(Terminal.ABSTRACT), () -> accept(Terminal.STATIC), () -> accept(Terminal.FINAL), () -> accept(Terminal.STRICTFP)));
+//	}
+//	private boolean typeParameters() {
+//		return accept(Nonterminal.TYPE_PARAMETERS, () -> acceptAll(() -> accept(Terminal.LESS_THAN), this::typeParameterList, () -> accept(Terminal.GREATER_THAN)));
+//	}
+//	private boolean typeParameterList() {
+//		return accept(Nonterminal.TYPE_PARAMETER_LIST, () -> acceptAll(this::typeParameter, () -> acceptRepeating(() -> acceptAll(() -> accept(Terminal.COMMA), this::typeParameter))));
+//	}
+//	private boolean superclass() {
+//		return accept(Nonterminal.SUPERCLASS, () -> acceptAll(() -> accept(Terminal.EXTENDS), this::classType));
+//	}
+//	private boolean superinterfaces() {
+//		return accept(Nonterminal.SUPERINTERFACES, () -> acceptAll(() -> accept(Terminal.IMPLEMENTS), this::interfaceTypeList));
+//	}
+//	private boolean interfaceTypeList() {
+//		return accept(Nonterminal.INTERFACE_TYPE_LIST, () -> acceptAll(this::interfaceType, () -> acceptRepeating(() -> acceptAll(() -> accept(Terminal.COMMA), this::interfaceType))));
+//	}
+//	private boolean classBody() {
+//		return accept(Nonterminal.CLASS_BODY, () -> acceptAll(() -> accept(Terminal.OPEN_BRACE), () -> acceptRepeating(this::classBodyDeclaration), () -> accept(Terminal.CLOSE_BRACE)));
+//	}
+//	private boolean classBodyDeclaration() {
+//		return accept(Nonterminal.CLASS_BODY_DECLARATION, () -> acceptAny(this::classMemberDeclaration, this::instanceInitializer, this::staticInitializer, this::constructorDeclaration));
+//	}
+//	private boolean classMemberDeclaration() {
+//		return accept(Nonterminal.CLASS_MEMBER_DECLARATION, () -> acceptAny(this::fieldDeclaration, this::methodDeclaration, this::classDeclaration, this::interfaceDeclaration, () -> accept(Terminal.SEMICOLON)));
+//	}
+//	private boolean fieldDeclaration() {
+//		return accept(Nonterminal.FIELD_DECLARATION, () -> acceptAll(() -> acceptRepeating(this::fieldModifier), this::unannType, this::variableDeclaratorList, () -> accept(Terminal.SEMICOLON)));
+//	}
+//	private boolean fieldModifier() {
+//		return accept(Nonterminal.FIELD_MODIFIER, () -> acceptAny(this::annotation, () -> accept(Terminal.PUBLIC), () -> accept(Terminal.PROTECTED), () -> accept(Terminal.PRIVATE), () -> accept(Terminal.STATIC), () -> accept(Terminal.FINAL), () -> accept(Terminal.TRANSIENT), () -> accept(Terminal.VOLATILE)));
+//	}
+//	private boolean variableDeclaratorList() {
+//		return accept(Nonterminal.VARIABLE_DECLARATOR_LIST, () -> acceptAll(this::variableDeclarator, () -> acceptRepeating(() -> acceptAll(() -> accept(Terminal.COMMA), this::variableDeclarator))));
+//	}
+//	private boolean variableDeclarator() {
+//		return accept(Nonterminal.VARIABLE_DECLARATOR, () -> acceptAll(this::variableDeclaratorId, () -> acceptOptional(() -> acceptAll(() -> accept(Terminal.ASSIGN), this::variableInitializer))));
+//	}
+//	private boolean variableDeclaratorId() {
+//		return accept(Nonterminal.VARIABLE_DECLARATOR_ID, () -> acceptAll(this::identifier, () -> acceptOptional(this::dims)));
+//	}
+//	private boolean variableInitializer() {
+//		return accept(Nonterminal.VARIABLE_INITIALIZER, () -> acceptAny(this::expression, this::arrayInitializer));
+//	}
+//	private boolean unannType() {
+//		return accept(Nonterminal.UNANN_TYPE, () -> acceptAny(this::unannPrimitiveType, this::unannReferenceType));
+//	}
+//	private boolean unannPrimitiveType() {
+//		return accept(Nonterminal.UNANN_PRIMITIVE_TYPE, () -> acceptAny(this::numericType, () -> accept(Terminal.BOOLEAN)));
+//	}
+//	private boolean unannReferenceType() {
+//		return accept(Nonterminal.UNANN_REFERENCE_TYPE, () -> acceptAny(this::unannArrayType, this::unannClassOrInterfaceType, this::unannTypeVariable));
+//	}
+//	private boolean unannClassOrInterfaceType() {
+//		if (!check(Terminal.IDENTIFIER)) {
+//			return false;
+//		}
+//		return accept(Nonterminal.UNANN_CLASS_OR_INTERFACE_TYPE, () -> acceptAny(this::unannClassType, this::unannInterfaceType));
+//	}
+//	private boolean unannClassType() {
+//		return accept(Nonterminal.UNANN_CLASS_TYPE, () -> acceptAny(() -> acceptAll(this::identifier, () -> acceptOptional(this::typeArguments)), () -> acceptAll(this::unannClassOrInterfaceType, () -> accept(Terminal.DOT), () -> acceptRepeating(this::annotation), this::identifier, () -> acceptOptional(this::typeArguments))));
+//	}
+//	private boolean unannInterfaceType() {
+//		return accept(Nonterminal.UNANN_INTERFACE_TYPE, this::unannClassType);
+//	}
+//	private boolean unannTypeVariable() {
+//		return accept(Nonterminal.UNANN_TYPE_VARIABLE, this::identifier);
+//	}
+//	private boolean unannArrayType() {
+//		return accept(Nonterminal.UNANN_ARRAY_TYPE, () -> acceptAny(() -> acceptAll(this::unannPrimitiveType, this::dims), () -> acceptAll(this::unannClassOrInterfaceType, this::dims), () -> acceptAll(this::unannTypeVariable, this::dims)));
+//	}
+//	private boolean methodDeclaration() {
+//		return accept(Nonterminal.METHOD_DECLARATION, () -> acceptAll(() -> acceptRepeating(this::methodModifier), this::methodHeader, this::methodBody));
+//	}
+//	private boolean methodModifier() {
+//		return accept(Nonterminal.METHOD_MODIFIER, () -> acceptAny(() -> acceptAll(this::annotation, () -> accept(Terminal.PUBLIC)), () -> accept(Terminal.PROTECTED), () -> accept(Terminal.PRIVATE), () -> accept(Terminal.ABSTRACT), () -> accept(Terminal.STATIC), () -> accept(Terminal.FINAL), () -> accept(Terminal.SYNCHRONIZED), () -> accept(Terminal.NATIVE), () -> accept(Terminal.STRICTFP)));
+//	}
+//	private boolean methodHeader() {
+//		return accept(Nonterminal.METHOD_HEADER, () -> acceptAny(() -> acceptAll(this::result, this::methodDeclarator, () -> acceptOptional(this::throws_)), () -> acceptAll(this::typeParameters, () -> acceptRepeating(this::annotation), this::result, this::methodDeclarator, () -> acceptOptional(this::throws_))));
+//	}
+//	private boolean result() {
+//		return accept(Nonterminal.RESULT, () -> acceptAny(this::unannType, () -> accept(Terminal.VOID)));
+//	}
+//	private boolean methodDeclarator() {
+//		return accept(Nonterminal.METHOD_DECLARATOR, () -> acceptAll(this::identifier, () -> accept(Terminal.OPEN_PARENTHESIS), () -> acceptOptional(this::formalParameterList), () -> accept(Terminal.CLOSE_PARENTHESIS), () -> acceptOptional(this::dims)));
+//	}
+//	private boolean formalParameterList() {
+//		return accept(Nonterminal.FORMAL_PARAMETER_LIST, () -> acceptAll(this::formalParameters, () -> acceptOptional(() -> acceptAll(() -> accept(Terminal.COMMA), this::lastFormalParameter))));
+//	}
+//	private boolean formalParameters() {
+//		return accept(Nonterminal.FORMAL_PARAMETERS, () -> acceptAny(() -> acceptAll(this::formalParameter, () -> acceptRepeating(() -> acceptAll(() -> accept(Terminal.COMMA), this::formalParameter))), () -> acceptAll(this::receiverParameter, () -> acceptRepeating(() -> acceptAll(() -> accept(Terminal.COMMA), this::formalParameter)))));
+//	}
+//	private boolean formalParameter() {
+//		return accept(Nonterminal.FORMAL_PARAMETER, () -> acceptAll(() -> acceptRepeating(this::variableModifier), this::unannType, this::variableDeclaratorId));
+//	}
+//	private boolean variableModifier() {
+//		return accept(Nonterminal.VARIABLE_MODIFIER, () -> acceptAny(this::annotation, () -> accept(Terminal.FINAL)));
+//	}
+//	private boolean lastFormalParameter() {
+//		return accept(Nonterminal.LAST_FORMAL_PARAMETER, () -> acceptAny(() -> acceptAll(() -> acceptRepeating(this::variableModifier), this::unannType, () -> acceptRepeating(this::annotation), () -> accept(Terminal.ELLIPSES), this::variableDeclaratorId), this::formalParameter));
+//	}
+//	private boolean receiverParameter() {
+//		return accept(Nonterminal.RECEIVER_PARAMETER, () -> acceptAll(() -> acceptRepeating(this::annotation), this::unannType, () -> acceptOptional(() -> acceptAll(this::identifier, () -> accept(Terminal.DOT))), () -> accept(Terminal.THIS)));
+//	}
+//	private boolean throws_() {
+//		return accept(Nonterminal.THROWS, () -> acceptAll(() -> accept(Terminal.THROWS), this::exceptionTypeList));
+//	}
+//	private boolean exceptionTypeList() {
+//		return accept(Nonterminal.EXCEPTION_TYPE_LIST, () -> acceptAll(this::exceptionType, () -> acceptRepeating(() -> acceptAll(() -> accept(Terminal.COMMA), this::exceptionType))));
+//	}
+//	private boolean exceptionType() {
+//		return accept(Nonterminal.EXCEPTION_TYPE, () -> acceptAny(this::classType, this::typeVariable));
+//	}
+//	private boolean methodBody() {
+//		return accept(Nonterminal.METHOD_BODY, () -> acceptAny(this::block, () -> accept(Terminal.SEMICOLON)));
+//	}
+//	private boolean instanceInitializer() {
+//		return accept(Nonterminal.INSTANCE_INITIALIZER, this::block);
+//	}
+//	private boolean staticInitializer() {
+//		return accept(Nonterminal.STATIC_INITIALIZER, () -> acceptAll(() -> accept(Terminal.STATIC), this::block));
+//	}
+//	private boolean constructorDeclaration() {
+//		return accept(Nonterminal.CONSTRUCTOR_DECLARATION, () -> acceptAll(() -> acceptRepeating(this::constructorModifier), this::constructorDeclarator, () -> acceptOptional(this::throws_), this::constructorBody));
+//	}
+//	private boolean constructorModifier() {
+//		return accept(Nonterminal.CONSTRUCTOR_MODIFIER, () -> acceptAny(this::annotation, () -> accept(Terminal.PUBLIC), () -> accept(Terminal.PROTECTED), () -> accept(Terminal.PRIVATE)));
+//	}
+//	private boolean constructorDeclarator() {
+//		return accept(Nonterminal.CONSTRUCTOR_DECLARATOR, () -> acceptAll(() -> acceptOptional(this::typeParameters), this::simpleTypeName, () -> accept(Terminal.OPEN_PARENTHESIS), () -> acceptOptional(this::formalParameterList), () -> accept(Terminal.CLOSE_PARENTHESIS)));
+//	}
+//	private boolean simpleTypeName() {
+//		return accept(Nonterminal.SIMPLE_TYPE_NAME, this::identifier);
+//	}
+//	private boolean constructorBody() {
+//		return accept(Nonterminal.CONSTRUCTOR_BODY, () -> acceptAll(() -> accept(Terminal.OPEN_BRACE), () -> acceptOptional(this::explicitConstructorInvocation), () -> acceptOptional(this::blockStatements), () -> accept(Terminal.CLOSE_BRACE)));
+//	}
+//	private boolean explicitConstructorInvocation() {
+//		return accept(Nonterminal.EXPLICIT_CONSTRUCTOR_INVOCATION, () -> acceptAny(() -> acceptAll(() -> acceptOptional(this::typeArguments), () -> accept(Terminal.THIS), () -> accept(Terminal.OPEN_PARENTHESIS), () -> acceptOptional(this::argumentList), () -> accept(Terminal.CLOSE_PARENTHESIS), () -> accept(Terminal.SEMICOLON)), () -> acceptAll(() -> acceptOptional(this::typeArguments), () -> accept(Terminal.SUPER), () -> accept(Terminal.OPEN_PARENTHESIS), () -> acceptOptional(this::argumentList), () -> accept(Terminal.CLOSE_PARENTHESIS), () -> accept(Terminal.SEMICOLON)), () -> acceptAll(this::expressionName, () -> accept(Terminal.DOT), () -> acceptOptional(this::typeArguments), () -> accept(Terminal.SUPER), () -> accept(Terminal.OPEN_PARENTHESIS), () -> acceptOptional(this::argumentList), () -> accept(Terminal.CLOSE_PARENTHESIS), () -> accept(Terminal.SEMICOLON)), () -> acceptAll(this::primary, () -> accept(Terminal.DOT), () -> acceptOptional(this::typeArguments), () -> accept(Terminal.SUPER), () -> accept(Terminal.OPEN_PARENTHESIS), () -> acceptOptional(this::argumentList), () -> accept(Terminal.CLOSE_PARENTHESIS), () -> accept(Terminal.SEMICOLON))));
+//	}
+//	private boolean enumDeclaration() {
+//		return accept(Nonterminal.ENUM_DECLARATION, () -> acceptAll(() -> acceptRepeating(this::classModifier), () -> accept(Terminal.ENUM), this::identifier, () -> acceptOptional(this::superinterfaces), this::enumBody));
+//	}
+//	private boolean enumBody() {
+//		return accept(Nonterminal.ENUM_BODY, () -> acceptAll(() -> accept(Terminal.OPEN_BRACE), () -> acceptOptional(this::enumConstantList), () -> acceptOptional(() -> accept(Terminal.COMMA)), () -> acceptOptional(this::enumBodyDeclarations), () -> accept(Terminal.CLOSE_BRACE)));
+//	}
+//	private boolean enumConstantList() {
+//		return accept(Nonterminal.ENUM_CONSTANT_LIST, () -> acceptAll(this::enumConstant, () -> acceptRepeating(() -> acceptAll(() -> accept(Terminal.COMMA), this::enumConstant))));
+//	}
+//	private boolean enumConstant() {
+//		return accept(Nonterminal.ENUM_CONSTANT, () -> acceptAll(() -> acceptRepeating(this::enumConstantModifier), this::identifier, () -> acceptOptional(() -> acceptAll(() -> accept(Terminal.OPEN_PARENTHESIS), this::argumentList, () -> accept(Terminal.CLOSE_PARENTHESIS))), () -> acceptOptional(this::classBody)));
+//	}
+//	private boolean enumConstantModifier() {
+//		return accept(Nonterminal.ENUM_CONSTANT_MODIFIER, this::annotation);
+//	}
+//	private boolean enumBodyDeclarations() {
+//		return accept(Nonterminal.ENUM_BODY_DECLARATIONS, () -> acceptAll(() -> accept(Terminal.SEMICOLON), () -> acceptRepeating(this::classBodyDeclaration)));
+//	}
+//	private boolean interfaceDeclaration() {
+//		return accept(Nonterminal.INTERFACE_DECLARATION, () -> acceptAny(this::normalInterfaceDeclaration, this::annotationTypeDeclaration));
+//	}
+//	private boolean normalInterfaceDeclaration() {
+//		return accept(Nonterminal.NORMAL_INTERFACE_DECLARATION, () -> acceptAll(() -> acceptRepeating(this::interfaceModifier), () -> accept(Terminal.INTERFACE), this::identifier, () -> acceptOptional(this::typeParameters), () -> acceptOptional(this::extendsInterfaces), this::interfaceBody));
+//	}
+//	private boolean interfaceModifier() {
+//		return accept(Nonterminal.INTERFACE_MODIFIER, () -> acceptAny(this::annotation, () -> accept(Terminal.PUBLIC), () -> accept(Terminal.PROTECTED), () -> accept(Terminal.PRIVATE), () -> accept(Terminal.ABSTRACT), () -> accept(Terminal.STATIC), () -> accept(Terminal.STRICTFP)));
+//	}
+//	private boolean extendsInterfaces() {
+//		return accept(Nonterminal.EXTENDS_INTERFACES, () -> acceptAll(() -> accept(Terminal.EXTENDS), this::interfaceTypeList));
+//	}
+//	private boolean interfaceBody() {
+//		return accept(Nonterminal.INTERFACE_BODY, () -> acceptAll(() -> accept(Terminal.OPEN_BRACE), () -> acceptRepeating(this::interfaceMemberDeclaration), () -> accept(Terminal.CLOSE_BRACE)));
+//	}
+//	private boolean interfaceMemberDeclaration() {
+//		return accept(Nonterminal.INTERFACE_MEMBER_DECLARATION, () -> acceptAny(this::constantDeclaration, this::interfaceMethodDeclaration, this::classDeclaration, this::interfaceDeclaration, () -> accept(Terminal.SEMICOLON)));
+//	}
+//	private boolean constantDeclaration() {
+//		return accept(Nonterminal.CONSTANT_DECLARATION, () -> acceptAll(() -> acceptRepeating(this::constantModifier), this::unannType, this::variableDeclaratorList, () -> accept(Terminal.SEMICOLON)));
+//	}
+//	private boolean constantModifier() {
+//		return accept(Nonterminal.CONSTANT_MODIFIER, () -> acceptAny(this::annotation, () -> accept(Terminal.PUBLIC), () -> accept(Terminal.STATIC), () -> accept(Terminal.FINAL)));
+//	}
+//	private boolean interfaceMethodDeclaration() {
+//		return accept(Nonterminal.INTERFACE_METHOD_DECLARATION, () -> acceptAll(() -> acceptRepeating(this::interfaceMethodModifier), this::methodHeader, this::methodBody));
+//	}
+//	private boolean interfaceMethodModifier() {
+//		return accept(Nonterminal.INTERFACE_METHOD_MODIFIER, () -> acceptAny(this::annotation, () -> accept(Terminal.PUBLIC), () -> accept(Terminal.ABSTRACT), () -> accept(Terminal.DEFAULT), () -> accept(Terminal.STATIC), () -> accept(Terminal.STRICTFP)));
+//	}
+//	private boolean annotationTypeDeclaration() {
+//		return accept(Nonterminal.ANNOTATION_TYPE_DECLARATION, () -> acceptAll(() -> acceptRepeating(this::interfaceModifier), () -> accept(Terminal.AT_SYMBOL), () -> accept(Terminal.INTERFACE), this::identifier, this::annotationTypeBody));
+//	}
+//	private boolean annotationTypeBody() {
+//		return accept(Nonterminal.ANNOTATION_TYPE_BODY, () -> acceptAll(() -> accept(Terminal.OPEN_BRACE), () -> acceptRepeating(this::annotationTypeMemberDeclaration), () -> accept(Terminal.CLOSE_BRACE)));
+//	}
+//	private boolean annotationTypeMemberDeclaration() {
+//		return accept(Nonterminal.ANNOTATION_TYPE_MEMBER_DECLARATION, () -> acceptAny(this::annotationTypeElementDeclaration, this::constantDeclaration, this::classDeclaration, this::interfaceDeclaration, () -> accept(Terminal.SEMICOLON)));
+//	}
+//	private boolean annotationTypeElementDeclaration() {
+//		return accept(Nonterminal.ANNOTATION_TYPE_ELEMENT_DECLARATION, () -> acceptAll(() -> acceptRepeating(this::annotationTypeElementModifier), this::unannType, this::identifier, () -> accept(Terminal.OPEN_PARENTHESIS), () -> accept(Terminal.CLOSE_PARENTHESIS), () -> acceptOptional(this::dims), () -> acceptOptional(this::defaultValue), () -> accept(Terminal.SEMICOLON)));
+//	}
+//	private boolean annotationTypeElementModifier() {
+//		return accept(Nonterminal.ANNOTATION_TYPE_ELEMENT_MODIFIER, () -> acceptAny(this::annotation, () -> accept(Terminal.PUBLIC), () -> accept(Terminal.ABSTRACT)));
+//	}
+//	private boolean defaultValue() {
+//		return accept(Nonterminal.DEFAULT_VALUE, () -> acceptAll(() -> accept(Terminal.DEFAULT), this::elementValue));
+//	}
+//	private boolean annotation() {
+//		return accept(Nonterminal.ANNOTATION, () -> acceptAny(this::normalAnnotation, this::markerAnnotation, this::singleElementAnnotation));
+//	}
+//	private boolean normalAnnotation() {
+//		return accept(Nonterminal.NORMAL_ANNOTATION, () -> acceptAll(() -> accept(Terminal.AT_SYMBOL), this::typeName, () -> accept(Terminal.OPEN_PARENTHESIS), () -> acceptOptional(this::elementValuePairList), () -> accept(Terminal.CLOSE_PARENTHESIS)));
+//	}
+//	private boolean elementValuePairList() {
+//		return accept(Nonterminal.ELEMENT_VALUE_PAIR_LIST, () -> acceptAll(this::elementValuePair, () -> acceptRepeating(() -> acceptAll(() -> accept(Terminal.COMMA), this::elementValuePair))));
+//	}
+//	private boolean elementValuePair() {
+//		return accept(Nonterminal.ELEMENT_VALUE_PAIR, () -> acceptAll(this::identifier, () -> accept(Terminal.ASSIGN), this::elementValue));
+//	}
+//	private boolean elementValue() {
+//		return accept(Nonterminal.ELEMENT_VALUE, () -> acceptAny(this::conditionalExpression, this::elementValueArrayInitializer, this::annotation));
+//	}
+//	private boolean elementValueArrayInitializer() {
+//		return accept(Nonterminal.ELEMENT_VALUE_ARRAY_INITIALIZER, () -> acceptAll(() -> accept(Terminal.OPEN_BRACE), () -> acceptOptional(this::elementValueList), () -> acceptOptional(() -> accept(Terminal.COMMA)), () -> accept(Terminal.CLOSE_BRACE)));
+//	}
+//	private boolean elementValueList() {
+//		return accept(Nonterminal.ELEMENT_VALUE_LIST, () -> acceptAll(this::elementValue, () -> acceptRepeating(() -> acceptAll(() -> accept(Terminal.COMMA), this::elementValue))));
+//	}
+//	private boolean markerAnnotation() {
+//		return accept(Nonterminal.MARKER_ANNOTATION, () -> acceptAll(() -> accept(Terminal.AT_SYMBOL), this::typeName));
+//	}
+//	private boolean singleElementAnnotation() {
+//		return accept(Nonterminal.SINGLE_ELEMENT_ANNOTATION, () -> acceptAll(() -> accept(Terminal.AT_SYMBOL), this::typeName, () -> accept(Terminal.OPEN_PARENTHESIS), this::elementValue, () -> accept(Terminal.CLOSE_PARENTHESIS)));
+//	}
+//	private boolean arrayInitializer() {
+//		return accept(Nonterminal.ARRAY_INITIALIZER, () -> acceptAll(() -> accept(Terminal.OPEN_BRACE), () -> acceptOptional(this::variableInitializerList), () -> acceptOptional(() -> accept(Terminal.COMMA)), () -> accept(Terminal.CLOSE_BRACE)));
+//	}
+//	private boolean variableInitializerList() {
+//		return accept(Nonterminal.VARIABLE_INITIALIZER_LIST, () -> acceptAll(this::variableInitializer, () -> acceptRepeating(() -> acceptAll(() -> accept(Terminal.COMMA), this::variableInitializer))));
+//	}
+//	private boolean block() {
+//		return accept(Nonterminal.BLOCK, () -> acceptAll(() -> accept(Terminal.OPEN_BRACE), () -> acceptOptional(this::blockStatements), () -> accept(Terminal.CLOSE_BRACE)));
+//	}
+//	private boolean blockStatements() {
+//		return accept(Nonterminal.BLOCK_STATEMENTS, () -> acceptAll(this::blockStatement, () -> acceptRepeating(this::blockStatement)));
+//	}
+//	private boolean blockStatement() {
+//		return accept(Nonterminal.BLOCK_STATEMENT, () -> acceptAny(this::localVariableDeclarationStatement, this::classDeclaration, this::statement));
+//	}
+//	private boolean localVariableDeclarationStatement() {
+//		return accept(Nonterminal.LOCAL_VARIABLE_DECLARATION_STATEMENT, () -> acceptAll(this::localVariableDeclaration, () -> accept(Terminal.SEMICOLON)));
+//	}
+//	private boolean localVariableDeclaration() {
+//		return accept(Nonterminal.LOCAL_VARIABLE_DECLARATION, () -> acceptAll(() -> acceptRepeating(this::variableModifier), this::unannType, this::variableDeclaratorList));
+//	}
+//	private boolean statement() {
+//		return accept(Nonterminal.STATEMENT, () -> acceptAny(this::statementWithoutTrailingSubstatement, this::labeledStatement, this::ifThenStatement, this::ifThenElseStatement, this::whileStatement, this::forStatement));
+//	}
+//	private boolean statementNoShortIf() {
+//		return accept(Nonterminal.STATEMENT_NO_SHORT_IF, () -> acceptAny(this::statementWithoutTrailingSubstatement, this::labeledStatementNoShortIf, this::ifThenElseStatementNoShortIf, this::whileStatementNoShortIf, this::forStatementNoShortIf));
+//	}
+//	private boolean statementWithoutTrailingSubstatement() {
+//		return accept(Nonterminal.STATEMENT_WITHOUT_TRAILING_SUBSTATEMENT, () -> acceptAny(this::block, this::emptyStatement, this::expressionStatement, this::assertStatement, this::switchStatement, this::doStatement, this::breakStatement, this::continueStatement, this::returnStatement, this::synchronizedStatement, this::throwStatement, this::tryStatement));
+//	}
+//	private boolean emptyStatement() {
+//		return accept(Nonterminal.EMPTY_STATEMENT, () -> accept(Terminal.SEMICOLON));
+//	}
+//	private boolean labeledStatement() {
+//		return accept(Nonterminal.LABELED_STATEMENT, () -> acceptAll(this::identifier, () -> accept(Terminal.COLON), this::statement));
+//	}
+//	private boolean labeledStatementNoShortIf() {
+//		return accept(Nonterminal.LABELED_STATEMENT_NO_SHORT_IF, () -> acceptAll(this::identifier, () -> accept(Terminal.COLON), this::statementNoShortIf));
+//	}
+//	private boolean expressionStatement() {
+//		return accept(Nonterminal.EXPRESSION_STATEMENT, () -> acceptAll(this::statementExpression, () -> accept(Terminal.SEMICOLON)));
+//	}
+//	private boolean statementExpression() {
+//		return accept(Nonterminal.STATEMENT_EXPRESSION, () -> acceptAny(this::assignment, this::preIncrementExpression, this::preDecrementExpression, this::postIncrementExpression, this::postDecrementExpression, this::methodInvocation, this::classInstanceCreationExpression));
+//	}
+//	private boolean ifThenStatement() {
+//		return accept(Nonterminal.IF_THEN_STATEMENT, () -> acceptAll(() -> accept(Terminal.IF), () -> accept(Terminal.OPEN_PARENTHESIS), this::expression, () -> accept(Terminal.CLOSE_PARENTHESIS), this::statement));
+//	}
+//	private boolean ifThenElseStatement() {
+//		return accept(Nonterminal.IF_THEN_ELSE_STATEMENT, () -> acceptAll(() -> accept(Terminal.IF), () -> accept(Terminal.OPEN_PARENTHESIS), this::expression, () -> accept(Terminal.CLOSE_PARENTHESIS), this::statementNoShortIf, () -> accept(Terminal.ELSE), this::statement));
+//	}
+//	private boolean ifThenElseStatementNoShortIf() {
+//		return accept(Nonterminal.IF_THEN_ELSE_STATEMENT_NO_SHORT_IF, () -> acceptAll(() -> accept(Terminal.IF), () -> accept(Terminal.OPEN_PARENTHESIS), this::expression, () -> accept(Terminal.CLOSE_PARENTHESIS), this::statementNoShortIf, () -> accept(Terminal.ELSE), this::statementNoShortIf));
+//	}
+//	private boolean assertStatement() {
+//		return accept(Nonterminal.ASSERT_STATEMENT, () -> acceptAny(() -> acceptAll(() -> accept(Terminal.ASSERT), this::expression, () -> accept(Terminal.SEMICOLON)), () -> acceptAll(() -> accept(Terminal.ASSERT), this::expression, () -> accept(Terminal.COLON), this::expression)));
+//	}
+//	private boolean switchStatement() {
+//		return accept(Nonterminal.SWITCH_STATEMENT, () -> acceptAll(() -> accept(Terminal.SWITCH), () -> accept(Terminal.OPEN_PARENTHESIS), this::expression, () -> accept(Terminal.CLOSE_PARENTHESIS), this::switchBlock));
+//	}
+//	private boolean switchBlock() {
+//		return accept(Nonterminal.SWITCH_BLOCK, () -> acceptAll(() -> accept(Terminal.OPEN_BRACE), () -> acceptRepeating(this::switchBlockStatementGroup), () -> acceptRepeating(this::switchLabel), () -> accept(Terminal.CLOSE_BRACE)));
+//	}
+//	private boolean switchBlockStatementGroup() {
+//		return accept(Nonterminal.SWITCH_BLOCK_STATEMENT_GROUP, () -> acceptAll(this::switchLabels, this::blockStatements));
+//	}
+//	private boolean switchLabels() {
+//		return accept(Nonterminal.SWITCH_LABELS, () -> acceptAll(this::switchLabel, () -> acceptRepeating(this::switchLabel)));
+//	}
+//	private boolean switchLabel() {
+//		return accept(Nonterminal.SWITCH_LABEL, () -> acceptAny(() -> acceptAll(() -> accept(Terminal.CASE), this::constantExpression, () -> accept(Terminal.COLON)), () -> acceptAll(() -> accept(Terminal.CASE), this::enumConstantName, () -> accept(Terminal.COLON)), () -> acceptAll(() -> accept(Terminal.DEFAULT), () -> accept(Terminal.COLON))));
+//	}
+//	private boolean enumConstantName() {
+//		return accept(Nonterminal.ENUM_CONSTANT_NAME, this::identifier);
+//	}
+//	private boolean whileStatement() {
+//		return accept(Nonterminal.WHILE_STATEMENT, () -> acceptAll(() -> accept(Terminal.WHILE), () -> accept(Terminal.OPEN_PARENTHESIS), this::expression, () -> accept(Terminal.CLOSE_PARENTHESIS), this::statement));
+//	}
+//	private boolean whileStatementNoShortIf() {
+//		return accept(Nonterminal.WHILE_STATEMENT_NO_SHORT_IF, () -> acceptAll(() -> accept(Terminal.WHILE), () -> accept(Terminal.OPEN_PARENTHESIS), this::expression, () -> accept(Terminal.CLOSE_PARENTHESIS), this::statementNoShortIf));
+//	}
+//	private boolean doStatement() {
+//		return accept(Nonterminal.DO_STATEMENT, () -> acceptAll(() -> accept(Terminal.DO), this::statement, () -> accept(Terminal.WHILE), () -> accept(Terminal.OPEN_PARENTHESIS), this::expression, () -> accept(Terminal.CLOSE_PARENTHESIS), () -> accept(Terminal.SEMICOLON)));
+//	}
+//	private boolean forStatement() {
+//		return accept(Nonterminal.FOR_STATEMENT, () -> acceptAny(this::basicForStatement, this::enhancedForStatement));
+//	}
+//	private boolean forStatementNoShortIf() {
+//		return accept(Nonterminal.FOR_STATEMENT_NO_SHORT_IF, () -> acceptAny(this::basicForStatementNoShortIf, this::enhancedForStatementNoShortIf));
+//	}
+//	private boolean basicForStatement() {
+//		return accept(Nonterminal.BASIC_FOR_STATEMENT, () -> acceptAll(() -> accept(Terminal.FOR), () -> accept(Terminal.OPEN_PARENTHESIS), () -> acceptOptional(this::forInit), () -> accept(Terminal.SEMICOLON), () -> acceptOptional(this::expression), () -> accept(Terminal.SEMICOLON), () -> acceptOptional(this::forUpdate), () -> accept(Terminal.CLOSE_PARENTHESIS), this::statement));
+//	}
+//	private boolean basicForStatementNoShortIf() {
+//		return accept(Nonterminal.BASIC_FOR_STATEMENT_NO_SHORT_IF, () -> acceptAll(() -> accept(Terminal.FOR), () -> accept(Terminal.OPEN_PARENTHESIS), () -> acceptOptional(this::forInit), () -> accept(Terminal.SEMICOLON), () -> acceptOptional(this::expression), () -> accept(Terminal.SEMICOLON), () -> acceptOptional(this::forUpdate), () -> accept(Terminal.CLOSE_PARENTHESIS), this::statementNoShortIf));
+//	}
+//	private boolean forInit() {
+//		return accept(Nonterminal.FOR_INIT, () -> acceptAny(this::statementExpressionList, this::localVariableDeclaration));
+//	}
+//	private boolean forUpdate() {
+//		return accept(Nonterminal.FOR_UPDATE, this::statementExpressionList);
+//	}
+//	private boolean statementExpressionList() {
+//		return accept(Nonterminal.STATEMENT_EXPRESSION_LIST, () -> acceptAll(this::statementExpression, () -> acceptRepeating(() -> acceptAll(() -> accept(Terminal.COMMA), this::statementExpression))));
+//	}
+//	private boolean enhancedForStatement() {
+//		return accept(Nonterminal.ENHANCED_FOR_STATEMENT, () -> acceptAll(() -> accept(Terminal.FOR), () -> accept(Terminal.OPEN_PARENTHESIS), () -> acceptRepeating(this::variableModifier), this::unannType, this::variableDeclaratorId, () -> accept(Terminal.COLON), this::expression, () -> accept(Terminal.CLOSE_PARENTHESIS), this::statement));
+//	}
+//	private boolean enhancedForStatementNoShortIf() {
+//		return accept(Nonterminal.ENHANCED_FOR_STATEMENT_NO_SHORT_IF, () -> acceptAll(() -> accept(Terminal.FOR), () -> accept(Terminal.OPEN_PARENTHESIS), () -> acceptRepeating(this::variableModifier), this::unannType, this::variableDeclaratorId, () -> accept(Terminal.COLON), this::expression, () -> accept(Terminal.CLOSE_PARENTHESIS), this::statementNoShortIf));
+//	}
+//	private boolean breakStatement() {
+//		return accept(Nonterminal.BREAK_STATEMENT, () -> acceptAll(() -> accept(Terminal.BREAK), () -> acceptOptional(this::identifier), () -> accept(Terminal.SEMICOLON)));
+//	}
+//	private boolean continueStatement() {
+//		return accept(Nonterminal.CONTINUE_STATEMENT, () -> acceptAll(() -> accept(Terminal.CONTINUE), () -> acceptOptional(this::identifier), () -> accept(Terminal.SEMICOLON)));
+//	}
+//	private boolean returnStatement() {
+//		return accept(Nonterminal.RETURN_STATEMENT, () -> acceptAll(() -> accept(Terminal.RETURN), () -> acceptOptional(this::expression), () -> accept(Terminal.SEMICOLON)));
+//	}
+//	private boolean throwStatement() {
+//		return accept(Nonterminal.THROW_STATEMENT, () -> acceptAll(() -> accept(Terminal.THROW), this::expression, () -> accept(Terminal.SEMICOLON)));
+//	}
+//	private boolean synchronizedStatement() {
+//		return accept(Nonterminal.SYNCHRONIZED_STATEMENT, () -> acceptAll(() -> accept(Terminal.SYNCHRONIZED), () -> accept(Terminal.OPEN_PARENTHESIS), this::expression, () -> accept(Terminal.CLOSE_PARENTHESIS), this::block));
+//	}
+//	private boolean tryStatement() {
+//		return accept(Nonterminal.TRY_STATEMENT, () -> acceptAny(() -> acceptAll(() -> accept(Terminal.TRY), this::block, () -> acceptOptional(this::catches), this::finally_), () -> acceptAll(() -> accept(Terminal.TRY), this::block, this::catches), this::tryWithResourcesStatement));
+//	}
+//	private boolean catches() {
+//		return accept(Nonterminal.CATCHES, () -> acceptAll(this::catchClause, () -> acceptRepeating(this::catchClause)));
+//	}
+//	private boolean catchClause() {
+//		return accept(Nonterminal.CATCH_CLAUSE, () -> acceptAll(() -> accept(Terminal.CATCH), () -> accept(Terminal.OPEN_PARENTHESIS), this::catchFormalParameter, () -> accept(Terminal.CLOSE_PARENTHESIS), this::block));
+//	}
+//	private boolean catchFormalParameter() {
+//		return accept(Nonterminal.CATCH_FORMAL_PARAMETER, () -> acceptAll(() -> acceptRepeating(this::variableModifier), this::catchType, this::variableDeclaratorId));
+//	}
+//	private boolean catchType() {
+//		return accept(Nonterminal.CATCH_TYPE, () -> acceptAll(() -> identifier("UnannClassType"), () -> acceptRepeating(() -> acceptAll(() -> accept(Terminal.OR), this::classType))));
+//	}
+//	private boolean finally_() {
+//		return accept(Nonterminal.FINALLY, () -> acceptAll(() -> accept(Terminal.FINALLY), this::block));
+//	}
+//	private boolean tryWithResourcesStatement() {
+//		return accept(Nonterminal.TRY_WITH_RESOURCES_STATEMENT, () -> acceptAll(() -> accept(Terminal.TRY), this::resourceSpecification, this::block, () -> acceptOptional(this::catches), () -> acceptOptional(this::finally_)));
+//	}
+//	private boolean resourceSpecification() {
+//		return accept(Nonterminal.RESOURCE_SPECIFICATION, () -> acceptAll(() -> accept(Terminal.OPEN_PARENTHESIS), this::resourceList, () -> acceptOptional(() -> accept(Terminal.SEMICOLON)), () -> accept(Terminal.CLOSE_PARENTHESIS)));
+//	}
+//	private boolean resourceList() {
+//		return accept(Nonterminal.RESOURCE_LIST, () -> acceptAll(this::resource, () -> acceptRepeating(() -> acceptAll(() -> accept(Terminal.SEMICOLON), this::resource))));
+//	}
+//	private boolean resource() {
+//		return accept(Nonterminal.RESOURCE, () -> acceptAll(() -> acceptRepeating(this::variableModifier), this::unannType, this::variableDeclaratorId, () -> accept(Terminal.ASSIGN), this::expression));
+//	}
+//	private boolean primary() {
+//		return accept(Nonterminal.PRIMARY, () -> acceptAny(this::primaryNoNewArray, this::arrayCreationExpression));
+//	}
+//	private boolean primaryNoNewArray() {
+//		if (!(
+//			   check(Terminal.INTEGER_LITERAL)
+//			|| check(Terminal.FLOATING_POINT_LITERAL)
+//			|| check(Terminal.CHARACTER_LITERAL)
+//			|| check(Terminal.STRING_LITERAL)
+//			|| check(Terminal.TRUE_LITERAL)
+//			|| check(Terminal.FALSE_LITERAL)
+//			|| check(Terminal.NULL_LITERAL)
+//			|| check(Terminal.IDENTIFIER)
+//			|| check(Terminal.BYTE)
+//			|| check(Terminal.SHORT)
+//			|| check(Terminal.INT)
+//			|| check(Terminal.LONG)
+//			|| check(Terminal.CHAR)
+//			|| check(Terminal.FLOAT)
+//			|| check(Terminal.DOUBLE)
+//			|| check(Terminal.BOOLEAN)
+//			|| check(Terminal.VOID)
+//			|| check(Terminal.THIS)
+//			|| check(Terminal.OPEN_PARENTHESIS)
+//			|| check(Terminal.NEW)
+//			|| check(Terminal.SUPER)
+//		)) {
+//			return false;
+//		}
+//		return accept(Nonterminal.PRIMARY_NO_NEW_ARRAY, () -> acceptAny(this::literal, this::classLiteral, () -> accept(Terminal.THIS), () -> acceptAll(this::typeName, () -> accept(Terminal.DOT), () -> accept(Terminal.THIS)), () -> acceptAll(() -> accept(Terminal.OPEN_PARENTHESIS), this::expression, () -> accept(Terminal.CLOSE_PARENTHESIS)), this::classInstanceCreationExpression, this::fieldAccess, this::arrayAccess, this::methodInvocation, this::methodReference));
+//	}
+//	private boolean classLiteral() {
+//		return accept(Nonterminal.CLASS_LITERAL, () -> acceptAny(() -> acceptAll(this::typeName, () -> acceptRepeating(() -> acceptAll(() -> accept(Terminal.OPEN_BRACKET), () -> accept(Terminal.CLOSE_BRACKET))), () -> accept(Terminal.DOT), () -> accept(Terminal.CLASS)), () -> acceptAll(this::numericType, () -> acceptRepeating(() -> acceptAll(() -> accept(Terminal.OPEN_BRACKET), () -> accept(Terminal.CLOSE_BRACKET))), () -> accept(Terminal.DOT), () -> accept(Terminal.CLASS)), () -> acceptAll(() -> accept(Terminal.BOOLEAN), () -> acceptRepeating(() -> acceptAll(() -> accept(Terminal.OPEN_BRACKET), () -> accept(Terminal.CLOSE_BRACKET))), () -> accept(Terminal.DOT), () -> accept(Terminal.CLASS)), () -> acceptAll(() -> accept(Terminal.VOID), () -> accept(Terminal.DOT), () -> accept(Terminal.CLASS))));
+//	}
+//	private boolean classInstanceCreationExpression() {
+//		return accept(Nonterminal.CLASS_INSTANCE_CREATION_EXPRESSION, () -> acceptAny(this::unqualifiedClassInstanceCreationExpression, () -> acceptAll(this::expressionName, () -> accept(Terminal.DOT), this::unqualifiedClassInstanceCreationExpression), () -> acceptAll(this::primary, () -> accept(Terminal.DOT), this::unqualifiedClassInstanceCreationExpression)));
+//	}
+//	private boolean unqualifiedClassInstanceCreationExpression() {
+//		return accept(Nonterminal.UNQUALIFIED_CLASS_INSTANCE_CREATION_EXPRESSION, () -> acceptAll(() -> accept(Terminal.NEW), () -> acceptOptional(this::typeArguments), this::classOrInterfaceTypeToInstantiate, () -> accept(Terminal.OPEN_PARENTHESIS), () -> acceptOptional(this::argumentList), () -> accept(Terminal.CLOSE_PARENTHESIS), () -> acceptOptional(this::classBody)));
+//	}
+//	private boolean classOrInterfaceTypeToInstantiate() {
+//		return accept(Nonterminal.CLASS_OR_INTERFACE_TYPE_TO_INSTANTIATE, () -> acceptAll(() -> acceptRepeating(this::annotation), this::identifier, () -> acceptRepeating(() -> acceptAll(() -> accept(Terminal.DOT), () -> acceptRepeating(this::annotation), this::identifier)), () -> acceptOptional(this::typeArgumentsOrDiamond)));
+//	}
+//	private boolean typeArgumentsOrDiamond() {
+//		return accept(Nonterminal.TYPE_ARGUMENTS_OR_DIAMOND, () -> acceptAny(this::typeArguments, () -> acceptAll(() -> accept(Terminal.LESS_THAN), () -> accept(Terminal.GREATER_THAN))));
+//	}
+//	private boolean fieldAccess() {
+//		return accept(Nonterminal.FIELD_ACCESS, () -> acceptAny(() -> acceptAll(this::primary, () -> accept(Terminal.DOT), this::identifier), () -> acceptAll(() -> accept(Terminal.SUPER), () -> accept(Terminal.DOT), this::identifier), () -> acceptAll(this::typeName, () -> accept(Terminal.DOT), () -> accept(Terminal.SUPER), () -> accept(Terminal.DOT), this::identifier)));
+//	}
+//	private boolean arrayAccess() {
+//		return accept(Nonterminal.ARRAY_ACCESS, () -> acceptAny(() -> acceptAll(this::expressionName, () -> accept(Terminal.OPEN_BRACKET), this::expression, () -> accept(Terminal.CLOSE_BRACKET)), () -> acceptAll(this::primaryNoNewArray, () -> accept(Terminal.OPEN_BRACKET), this::expression, () -> accept(Terminal.CLOSE_BRACKET))));
+//	}
+//	private boolean methodInvocation() {
+//		return accept(Nonterminal.METHOD_INVOCATION, () -> acceptAny(() -> acceptAll(this::methodName, () -> accept(Terminal.OPEN_PARENTHESIS), () -> acceptOptional(this::argumentList), () -> accept(Terminal.CLOSE_PARENTHESIS)), () -> acceptAll(this::typeName, () -> accept(Terminal.DOT), () -> acceptOptional(this::typeArguments), this::identifier, () -> accept(Terminal.OPEN_PARENTHESIS), () -> acceptOptional(this::argumentList), () -> accept(Terminal.CLOSE_PARENTHESIS)), () -> acceptAll(this::expressionName, () -> accept(Terminal.DOT), () -> acceptOptional(this::typeArguments), this::identifier, () -> accept(Terminal.OPEN_PARENTHESIS), () -> acceptOptional(this::argumentList), () -> accept(Terminal.CLOSE_PARENTHESIS)), () -> acceptAll(this::primary, () -> accept(Terminal.DOT), () -> acceptOptional(this::typeArguments), this::identifier, () -> accept(Terminal.OPEN_PARENTHESIS), () -> acceptOptional(this::argumentList), () -> accept(Terminal.CLOSE_PARENTHESIS)), () -> acceptAll(() -> accept(Terminal.SUPER), () -> accept(Terminal.DOT), () -> acceptOptional(this::typeArguments), this::identifier, () -> accept(Terminal.OPEN_PARENTHESIS), () -> acceptOptional(this::argumentList), () -> accept(Terminal.CLOSE_PARENTHESIS)), () -> acceptAll(this::typeName, () -> accept(Terminal.DOT), () -> accept(Terminal.SUPER), () -> accept(Terminal.DOT), () -> acceptOptional(this::typeArguments), this::identifier, () -> accept(Terminal.OPEN_PARENTHESIS), () -> acceptOptional(this::argumentList), () -> accept(Terminal.CLOSE_PARENTHESIS))));
+//	}
+//	private boolean argumentList() {
+//		return accept(Nonterminal.ARGUMENT_LIST, () -> acceptAll(this::expression, () -> acceptRepeating(() -> acceptAll(() -> accept(Terminal.COMMA), this::expression))));
+//	}
+//	private boolean methodReference() {
+//		return accept(Nonterminal.METHOD_REFERENCE, () -> acceptAny(() -> acceptAll(this::expressionName, () -> accept(Terminal.DOUBLE_COLON), () -> acceptOptional(this::typeArguments), this::identifier), () -> acceptAll(this::referenceType, () -> accept(Terminal.DOUBLE_COLON), () -> acceptOptional(this::typeArguments), this::identifier), () -> acceptAll(this::primary, () -> accept(Terminal.DOUBLE_COLON), () -> acceptOptional(this::typeArguments), this::identifier), () -> acceptAll(() -> accept(Terminal.SUPER), () -> accept(Terminal.DOUBLE_COLON), () -> acceptOptional(this::typeArguments), this::identifier), () -> acceptAll(this::typeName, () -> accept(Terminal.DOT), () -> accept(Terminal.SUPER), () -> accept(Terminal.DOUBLE_COLON), () -> acceptOptional(this::typeArguments), this::identifier), () -> acceptAll(this::classType, () -> accept(Terminal.DOUBLE_COLON), () -> acceptOptional(this::typeArguments), () -> accept(Terminal.NEW)), () -> acceptAll(this::arrayType, () -> accept(Terminal.DOUBLE_COLON), () -> accept(Terminal.NEW))));
+//	}
+//	private boolean arrayCreationExpression() {
+//		return accept(Nonterminal.ARRAY_CREATION_EXPRESSION, () -> acceptAny(() -> acceptAll(() -> accept(Terminal.NEW), this::primitiveType, this::dimExprs, () -> acceptOptional(this::dims)), () -> acceptAll(() -> accept(Terminal.NEW), this::classOrInterfaceType, this::dimExprs, () -> acceptOptional(this::dims)), () -> acceptAll(() -> accept(Terminal.NEW), this::primitiveType, this::dims, this::arrayInitializer), () -> acceptAll(() -> accept(Terminal.NEW), this::classOrInterfaceType, this::dims, this::arrayInitializer)));
+//	}
+//	private boolean dimExprs() {
+//		return accept(Nonterminal.DIM_EXPRS, () -> acceptAll(this::dimExpr, () -> acceptRepeating(this::dimExpr)));
+//	}
+//	private boolean dimExpr() {
+//		return accept(Nonterminal.DIM_EXPR, () -> acceptAll(() -> acceptRepeating(this::annotation), () -> accept(Terminal.OPEN_BRACKET), this::expression, () -> accept(Terminal.CLOSE_BRACKET)));
+//	}
+//	private boolean expression() {
+//		return accept(Nonterminal.EXPRESSION, () -> acceptAny(this::lambdaExpression, this::assignmentExpression));
+//	}
+//	private boolean lambdaExpression() {
+//		return accept(Nonterminal.LAMBDA_EXPRESSION, () -> acceptAll(this::lambdaParameters, () -> accept(Terminal.LAMBDA), this::lambdaBody));
+//	}
+//	private boolean lambdaParameters() {
+//		return accept(Nonterminal.LAMBDA_PARAMETERS, () -> acceptAny(this::identifier, () -> acceptAll(() -> accept(Terminal.OPEN_PARENTHESIS), () -> acceptOptional(this::formalParameterList), () -> accept(Terminal.CLOSE_PARENTHESIS)), () -> acceptAll(() -> accept(Terminal.OPEN_PARENTHESIS), this::inferredFormalParameterList, () -> accept(Terminal.CLOSE_PARENTHESIS))));
+//	}
+//	private boolean inferredFormalParameterList() {
+//		return accept(Nonterminal.INFERRED_FORMAL_PARAMETER_LIST, () -> acceptAll(this::identifier, () -> acceptRepeating(() -> acceptAll(() -> accept(Terminal.COMMA), this::identifier))));
+//	}
+//	private boolean lambdaBody() {
+//		return accept(Nonterminal.LAMBDA_BODY, () -> acceptAny(this::expression, this::block));
+//	}
+//	private boolean assignmentExpression() {
+//		return accept(Nonterminal.ASSIGNMENT_EXPRESSION, () -> acceptAny(this::conditionalOrExpression, this::assignment));
+//	}
+//	private boolean assignment() {
+//		return accept(Nonterminal.ASSIGNMENT, () -> acceptAll(this::leftHandSide, this::assignmentOperator, this::expression));
+//	}
+//	private boolean leftHandSide() {
+//		return accept(Nonterminal.LEFT_HAND_SIDE, () -> acceptAny(this::expressionName, this::fieldAccess, this::arrayAccess));
+//	}
+//	private boolean assignmentOperator() {
+//		return accept(Nonterminal.ASSIGNMENT_OPERATOR, () -> acceptAny(() -> accept(Terminal.ASSIGN), () -> accept(Terminal.ASSIGN_MULTIPLY), () -> accept(Terminal.ASSIGN_DIVIDE), () -> accept(Terminal.ASSIGN_MOD), () -> accept(Terminal.ASSIGN_ADD), () -> accept(Terminal.ASSIGN_SUBTRACT), () -> accept(Terminal.ASSIGN_LEFT_SHIFT), () -> accept(Terminal.ASSIGN_RIGHT_SHIFT), () -> accept(Terminal.ASSIGN_UNSIGNED_RIGHT_SHIFT), () -> accept(Terminal.ASSIGN_AND), () -> accept(Terminal.ASSIGN_XOR), () -> accept(Terminal.ASSIGN_OR)));
+//	}
+//	private boolean conditionalExpression() {
+//		return accept(Nonterminal.CONDITIONAL_EXPRESSION, () -> acceptAny(() -> acceptAll(this::conditionalOrExpression, () -> accept(Terminal.TERNARY), this::expression, () -> accept(Terminal.COLON), this::conditionalExpression), () -> acceptAll(this::conditionalOrExpression, () -> accept(Terminal.TERNARY), this::expression, () -> accept(Terminal.COLON), this::lambdaExpression), this::conditionalOrExpression));
+//	}
+//	private boolean conditionalOrExpression() {
+//		return accept(Nonterminal.CONDITIONAL_OR_EXPRESSION, () -> acceptAll(this::conditionalAndExpression, () -> acceptRepeating(() -> acceptAll(() -> accept(Terminal.OR_GATE), this::conditionalAndExpression))));
+//	}
+//	private boolean conditionalAndExpression() {
+//		return accept(Nonterminal.CONDITIONAL_AND_EXPRESSION, () -> acceptAll(this::inclusiveOrExpression, () -> acceptRepeating(() -> acceptAll(() -> accept(Terminal.AND_GATE), this::inclusiveOrExpression))));
+//	}
+//	private boolean inclusiveOrExpression() {
+//		return accept(Nonterminal.INCLUSIVE_OR_EXPRESSION, () -> acceptAll(this::exclusiveOrExpression, () -> acceptRepeating(() -> acceptAll(() -> accept(Terminal.OR), this::exclusiveOrExpression))));
+//	}
+//	private boolean exclusiveOrExpression() {
+//		return accept(Nonterminal.EXCLUSIVE_OR_EXPRESSION, () -> acceptAll(this::andExpression, () -> acceptRepeating(() -> acceptAll(() -> accept(Terminal.XOR), this::andExpression))));
+//	}
+//	private boolean andExpression() {
+//		return accept(Nonterminal.AND_EXPRESSION, () -> acceptAll(this::equalityExpression, () -> acceptRepeating(() -> acceptAll(() -> accept(Terminal.AND), this::equalityExpression))));
+//	}
+//	private boolean equalityExpression() {
+//		return accept(Nonterminal.EQUALITY_EXPRESSION, () -> acceptAll(this::relationalExpression, () -> acceptRepeating(() -> acceptAll(() -> acceptAny(() -> accept(Terminal.EQUAL_TO), () -> accept(Terminal.NOT_EQUAL_TO)), this::relationalExpression))));
+//	}
+//	private boolean relationalExpression() {
+//		return accept(Nonterminal.RELATIONAL_EXPRESSION, () -> acceptAny(() -> acceptAll(this::shiftExpression, () -> accept(Terminal.INSTANCEOF), this::referenceType), () -> acceptAll(this::shiftExpression, () -> acceptRepeating(() -> acceptAll(() -> acceptAny(() -> accept(Terminal.LESS_THAN), () -> accept(Terminal.GREATER_THAN), () -> accept(Terminal.LESS_THAN_OR_EQUAL_TO), () -> accept(Terminal.GREATER_THAN_OR_EQUAL_TO)), this::shiftExpression)))));
+//	}
+//	private boolean shiftExpression() {
+//		return accept(Nonterminal.SHIFT_EXPRESSION, () -> acceptAll(this::additiveExpression, () -> acceptRepeating(() -> acceptAll(() -> acceptAny(() -> accept(Terminal.LEFT_SHIFT), () -> accept(Terminal.RIGHT_SHIFT), () -> accept(Terminal.UNSIGNED_RIGHT_SHIFT)), this::additiveExpression))));
+//	}
+//	private boolean additiveExpression() {
+//		return accept(Nonterminal.ADDITIVE_EXPRESSION, () -> acceptAll(this::multiplicativeExpression, () -> acceptRepeating(() -> acceptAll(() -> acceptAny(() -> accept(Terminal.ADD), () -> accept(Terminal.SUBTRACT)), this::multiplicativeExpression))));
+//	}
+//	private boolean multiplicativeExpression() {
+//		return accept(Nonterminal.MULTIPLICATIVE_EXPRESSION, () -> acceptAll(this::unaryExpression, () -> acceptRepeating(() -> acceptAll(() -> acceptAny(() -> accept(Terminal.MULTIPLY), () -> accept(Terminal.DIVIDE), () -> accept(Terminal.MODULO)), this::unaryExpression))));
+//	}
+//	private boolean unaryExpression() {
+//		return accept(Nonterminal.UNARY_EXPRESSION, () -> acceptAny(this::preIncrementExpression, this::preDecrementExpression, () -> acceptAll(() -> accept(Terminal.ADD), this::unaryExpression), () -> acceptAll(() -> accept(Terminal.SUBTRACT), this::unaryExpression), this::unaryExpressionNotPlusMinus));
+//	}
+//	private boolean preIncrementExpression() {
+//		return accept(Nonterminal.PRE_INCREMENT_EXPRESSION, () -> acceptAll(() -> accept(Terminal.INCREMENT), this::unaryExpression));
+//	}
+//	private boolean preDecrementExpression() {
+//		return accept(Nonterminal.PRE_DECREMENT_EXPRESSION, () -> acceptAll(() -> accept(Terminal.DECREMENT), this::unaryExpression));
+//	}
+//	private boolean unaryExpressionNotPlusMinus() {
+//		return accept(Nonterminal.UNARY_EXPRESSION_NOT_PLUS_MINUS, () -> acceptAny(this::postfixExpression, () -> acceptAll(() -> accept(Terminal.BITWISE_COMPLEMENT), this::unaryExpression), () -> acceptAll(() -> accept(Terminal.NOT), this::unaryExpression), this::castExpression));
+//	}
+//	private boolean postfixExpression() {
+//		if (!(
+//			   check(Terminal.INTEGER_LITERAL)
+//			|| check(Terminal.FLOATING_POINT_LITERAL)
+//			|| check(Terminal.CHARACTER_LITERAL)
+//			|| check(Terminal.STRING_LITERAL)
+//			|| check(Terminal.TRUE_LITERAL)
+//			|| check(Terminal.FALSE_LITERAL)
+//			|| check(Terminal.NULL_LITERAL)
+//			|| check(Terminal.IDENTIFIER)
+//			|| check(Terminal.BYTE)
+//			|| check(Terminal.SHORT)
+//			|| check(Terminal.INT)
+//			|| check(Terminal.LONG)
+//			|| check(Terminal.CHAR)
+//			|| check(Terminal.FLOAT)
+//			|| check(Terminal.DOUBLE)
+//			|| check(Terminal.BOOLEAN)
+//			|| check(Terminal.VOID)
+//			|| check(Terminal.THIS)
+//			|| check(Terminal.OPEN_PARENTHESIS)
+//			|| check(Terminal.NEW)
+//			|| check(Terminal.SUPER)
+//		)) { return false; }
+//		return accept(Nonterminal.POSTFIX_EXPRESSION, () -> acceptAny(this::primary, this::expressionName, this::postIncrementExpression, this::postDecrementExpression));
+//	}
+//	private boolean postIncrementExpression() {
+//		return accept(Nonterminal.POST_INCREMENT_EXPRESSION, () -> acceptAll(this::postfixExpression, () -> accept(Terminal.INCREMENT)));
+//	}
+//	private boolean postDecrementExpression() {
+//		return accept(Nonterminal.POST_DECREMENT_EXPRESSION, () -> acceptAll(this::postfixExpression, () -> accept(Terminal.DECREMENT)));
+//	}
+//	private boolean castExpression() {
+//		return accept(Nonterminal.CAST_EXPRESSION, () -> acceptAny(() -> acceptAll(() -> accept(Terminal.OPEN_PARENTHESIS), this::primitiveType, () -> accept(Terminal.CLOSE_PARENTHESIS), this::unaryExpression), () -> acceptAll(() -> accept(Terminal.OPEN_PARENTHESIS), this::referenceType, () -> acceptRepeating(this::additionalBound), () -> accept(Terminal.CLOSE_PARENTHESIS), this::unaryExpressionNotPlusMinus), () -> acceptAll(() -> accept(Terminal.OPEN_PARENTHESIS), this::referenceType, () -> acceptRepeating(this::additionalBound), () -> accept(Terminal.CLOSE_PARENTHESIS), this::lambdaExpression)));
+//	}
+//	private boolean constantExpression() {
+//		return accept(Nonterminal.CONSTANT_EXPRESSION, this::expression);
+//	}
+//}

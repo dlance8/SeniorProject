@@ -12,7 +12,7 @@ public class TerminalNode implements TreeNode {
 	}
 	@Override
 	public String valueString() {
-		return token.getType().toString() + ": " + token.getText();
+		return "\u001B[32m" + token.getType().toString() + ": " + token.getText() + "\u001B[0m";
 	}
 	@Override
 	public String toString() {

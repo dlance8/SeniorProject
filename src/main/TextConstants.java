@@ -9,7 +9,7 @@ public final class TextConstants {
 	public static final char CR = 0x0A, FF = 0x0C, HT = 0x09, LF = 0x0D, SP = 0x20, SUB = 0x1A;
 
 	public static final EnumSet<Terminal> ASSIGNMENT_OPERATORS;
-	public static final EnumSet<TokenType> LITERAL_TYPES;
+	//public static final EnumSet<TokenType> LITERAL_TYPES;
 
 	public static final HashMap<String, Terminal>
 		BOOLEAN_LITERALS = new HashMap<>(),
@@ -26,8 +26,8 @@ public final class TextConstants {
 			Terminal.ASSIGN_RIGHT_SHIFT, Terminal.ASSIGN_UNSIGNED_RIGHT_SHIFT, Terminal.ASSIGN_AND, Terminal.ASSIGN_XOR,
 			Terminal.ASSIGN_OR);
 
-		LITERAL_TYPES = EnumSet.of(TokenType.INTEGER_LITERAL, TokenType.FLOATING_POINT_LITERAL,
-			TokenType.BOOLEAN_LITERAL, TokenType.CHARACTER_LITERAL, TokenType.STRING_LITERAL, TokenType.NULL_LITERAL);
+//		LITERAL_TYPES = EnumSet.of(TokenType.INTEGER_LITERAL, TokenType.FLOATING_POINT_LITERAL,
+//			TokenType.BOOLEAN_LITERAL, TokenType.CHARACTER_LITERAL, TokenType.STRING_LITERAL, TokenType.NULL_LITERAL);
 
 		BOOLEAN_LITERALS.put("true",    Terminal.TRUE_LITERAL   );
 		BOOLEAN_LITERALS.put("false",   Terminal.FALSE_LITERAL  );

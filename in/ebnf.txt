@@ -70,7 +70,7 @@ AmbiguousName = Identifier , { "." , Identifier } ;
 
 CompilationUnit = [ PackageDeclaration ] , { ImportDeclaration } , { TypeDeclaration } ;
 
-PackageDeclaration = { PackageModifier } , "package" , Identifier , { "." , Identifier } ;
+PackageDeclaration = { PackageModifier } , "package" , Identifier , { "." , Identifier }, ";" ;
 
 PackageModifier = Annotation ;
 
@@ -136,8 +136,8 @@ VariableDeclaratorId = Identifier , [ Dims ] ;
 VariableInitializer = Expression
                     | ArrayInitializer ;
 
-UnannType = UnannPrimitiveType
-          | UnannReferenceType ;
+UnannType = UnannReferenceType
+          | UnannPrimitiveType ;
 
 UnannPrimitiveType = NumericType
                    | "boolean" ;
@@ -162,7 +162,7 @@ UnannArrayType = UnannPrimitiveType , Dims
 
 MethodDeclaration = { MethodModifier } , MethodHeader , MethodBody ;
 
-MethodModifier = Annotation , "public" | "protected" | "private" | "abstract" | "static" | "final" | "synchronized" | "native" | "strictfp" ;
+MethodModifier = Annotation | "public" | "protected" | "private" | "abstract" | "static" | "final" | "synchronized" | "native" | "strictfp" ;
 
 MethodHeader = Result , MethodDeclarator , [ Throws ]
              | TypeParameters , { Annotation } , Result , MethodDeclarator , [ Throws ] ;

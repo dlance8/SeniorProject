@@ -227,10 +227,10 @@ public class Lexer {
 		return acceptNonIdentifierTerminal(TokenType.KEYWORD, TextConstants.KEYWORDS, false);
 	}
 	private boolean booleanLiteral() {
-		return acceptNonIdentifierTerminal(TokenType.BOOLEAN_LITERAL, TextConstants.BOOLEAN_LITERALS, false);
+		return acceptNonIdentifierTerminal(TokenType.LITERAL, TextConstants.BOOLEAN_LITERALS, false);
 	}
 	private boolean nullLiteral() {
-		return acceptNonIdentifierTerminal(TokenType.NULL_LITERAL, TextConstants.NULL_LITERAL, false);
+		return acceptNonIdentifierTerminal(TokenType.LITERAL, TextConstants.NULL_LITERAL, false);
 	}
 	private boolean separator() {
 		return acceptNonIdentifierTerminal(TokenType.SEPARATOR, TextConstants.SEPARATORS, true);
@@ -256,7 +256,7 @@ public class Lexer {
 
 		if ((hexNumeral() || octalNumeral() || binaryNumeral() || decimalNumeral())) {
 			acceptAny('l', 'L');
-			newToken(TokenType.INTEGER_LITERAL, Terminal.INTEGER_LITERAL);
+			newToken(TokenType.LITERAL, Terminal.INTEGER_LITERAL);
 			return true;
 		} else {
 			return false;
@@ -373,7 +373,7 @@ public class Lexer {
 		/* floating point literal = decimal floating point literal | hexadecimal floating point literal ; */
 		final boolean accepted = decimalFloatingPointLiteral() || hexadecimalFloatingPointLiteral();
 		if (accepted)
-			newToken(TokenType.FLOATING_POINT_LITERAL, Terminal.FLOATING_POINT_LITERAL);
+			newToken(TokenType.LITERAL, Terminal.FLOATING_POINT_LITERAL);
 		return accepted;
 	}
 	private boolean decimalFloatingPointLiteral() {
@@ -502,7 +502,7 @@ public class Lexer {
 			else return true;
 		});
 		if (accepted)
-			newToken(TokenType.CHARACTER_LITERAL, Terminal.CHARACTER_LITERAL);
+			newToken(TokenType.LITERAL, Terminal.CHARACTER_LITERAL);
 		return accepted;
 	}
 
@@ -526,7 +526,7 @@ public class Lexer {
 			return true;
 		});
 		if (accepted)
-			newToken(TokenType.STRING_LITERAL, Terminal.STRING_LITERAL);
+			newToken(TokenType.LITERAL, Terminal.STRING_LITERAL);
 		return accepted;
 	}
 

@@ -1,38 +1,21 @@
 package main;
 import tree.NonterminalNode;
 import tree.TerminalNode;
-
 import java.io.IOException;
 import java.util.ArrayList;
 public class SimpleParser {
-	public static void main(String[] args) {
-		ArrayList<Token> tokens;
-		try {
-			tokens = new Lexer().lex("in/MyClass.java");
-		} catch (IOException e) {
-			return;
-		}
+	public static void main(String[] args) throws IOException {
+		ArrayList<Token> tokens = new Lexer().lex("in/MyClass.java");
 
 		for (Token token : tokens)
 			System.out.println(token);
 
 		SimpleParser parser = new SimpleParser(tokens);
 
-		NonterminalNode start;
-
-		try {
-			parser.parse();
-		} catch (StackOverflowError e) {
-
-		}
-
-		start = parser.root;
-
-		//new TreeTightener().tighten(start);
+		NonterminalNode start = parser.parse();
 
 		System.out.println(start);
 	}
-
 
 	private final ArrayList<Token> tokens;
 	public final NonterminalNode root = new NonterminalNode(Nonterminal.MY_ROOT);
@@ -53,21 +36,13 @@ public class SimpleParser {
 		return root;
 	}
 	private boolean identifier() {
-		return accept(Nonterminal.IDENTIFIER,
-				() -> acceptAppendAdvance(parsing && currentToken.getType() == TokenType.IDENTIFIER));
+		return accept(Nonterminal.IDENTIFIER, () -> acceptAppendAdvance(parsing && currentToken.getType() == TokenType.IDENTIFIER));
 	}
 	private boolean identifier(String value) {
-		return accept(Nonterminal.IDENTIFIER,
-				() -> {
-					System.out.println("\"" + currentToken.getText() + "\", \"" + value + "\"");
-					return acceptAppendAdvance(parsing && currentToken.getType() == TokenType.IDENTIFIER && currentToken.getText().equals(value));
-
-				});
+		return accept(Nonterminal.IDENTIFIER, () -> acceptAppendAdvance(parsing && currentToken.getType() == TokenType.IDENTIFIER && currentToken.getText().equals(value)));
 	}
 	private boolean literal() {
-		return accept(Nonterminal.LITERAL,
-				() -> acceptAppendAdvance(currentToken.getType() == TokenType.LITERAL)
-		);
+		return accept(Nonterminal.LITERAL, () -> acceptAppendAdvance(currentToken.getType() == TokenType.LITERAL));
 	}
 	private boolean accept(Nonterminal value, NonterminalAcceptor acceptor) {
 		final NonterminalNode parentAtStart = currentParent;

@@ -174,6 +174,8 @@ public class Lexer {
 				} else if (accept('/')) {
 					// accepted = true; (redundant)
 					acceptRepeating(this::inputCharacter);
+				} else {
+					accepted = false;
 				}
 			}
 			return accepted;

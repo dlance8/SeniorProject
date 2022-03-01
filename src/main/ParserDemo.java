@@ -15,8 +15,10 @@ public class ParserDemo extends Application {
 	public void start(Stage primaryStage) {
 		ArrayList<Token> tokens;
 		try {
-			tokens = new Lexer().lex("in/MyClass.java");
+			tokens = new Lexer().lex("examples/Example4.java");
 		} catch (IOException e) {
+			e.printStackTrace();
+			primaryStage.show();
 			return;
 		}
 
@@ -47,3 +49,4 @@ public class ParserDemo extends Application {
 		primaryStage.show();
 	}
 }
+

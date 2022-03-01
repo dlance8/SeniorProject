@@ -9,16 +9,23 @@ import java.util.LinkedList;
 
 public class EbnfToJava {
 	public static void main(String[] args) {
-		NonterminalNode root = new Parser(new Lexer("in/SimpleEBNF.txt")).parse();
-
+		NonterminalNode root = new Parser(new Lexer("in/ebnf.txt")).parse();
+		//System.out.println(root);
 		new TreeTightener().tighten(root);
 
-		try (PrintWriter x = new PrintWriter("in/out.txt")) {
+		//System.out.println("\n\n" + root);
+
+		//System.out.println("\n\n" + new Translator().translate(root));
+
+		try {
+			PrintWriter x = new PrintWriter("in/out.txt");
 			x.println(new Translator().translate(root));
-		} catch (IOException e) {
+			x.close();
+		} catch (IOException e)
+		{
 			e.printStackTrace();
-			System.exit(1);
 		}
+		System.out.println(1);
 	}
 
 	private static class TreeTightener {
@@ -77,6 +84,7 @@ public class EbnfToJava {
 				javaCode.append(");\n}\n");
 			}
 
+			System.out.println();
 			for (String enumValue : enumValues)
 				System.out.print(enumValue + ", ");
 			System.out.println();
@@ -248,7 +256,9 @@ public class EbnfToJava {
 				return null;
 			}
 
-			return new Token(type, text, line, 0);
+			Token t = new Token(type, text, line, 0);
+			System.out.println(text);
+			return t;
 		}
 		private void advance() {
 			currentChar = (lexing = ++currentIndex < in.length()) ? in.charAt(currentIndex) : 0;
@@ -268,6 +278,10 @@ public class EbnfToJava {
 					return true;
 				default: return false;
 			}
+		}
+		private void x() {
+			String base = in.substring(currentIndex);
+			System.out.println(base.substring(0, base.indexOf('=')));
 		}
 	}
 
@@ -344,6 +358,9 @@ public class EbnfToJava {
 
 		void expect(NonterminalNode parent, String text) {
 			if (!accept(parent, text)) {
+				lexer.x();
+				System.out.println(text);
+				System.exit(1);
 				error("Expected \"" + text + "\"" + ". Got \"" + currentToken.text + "\" at line " + currentToken.line);
 			}
 		}

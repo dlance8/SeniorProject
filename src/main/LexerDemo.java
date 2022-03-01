@@ -4,9 +4,9 @@ import java.util.ArrayList;
 public class LexerDemo {
 	public static void main(String[] args) throws IOException {
 		final long startTime = System.nanoTime();
-		ArrayList<Token> tokens = new Lexer().lex("in/String.java");
+		ArrayList<Token> tokens = new Lexer().lex("in/MyClass.txt");
 		final long stopTime = System.nanoTime();
-		demo2(tokens);
+		demo1(tokens);
 		System.out.println((stopTime - startTime) / 1e6 + "ms");
 	}
 
@@ -23,29 +23,29 @@ public class LexerDemo {
 		int parenthesis = 0;
 
 		for (Token token : tokens) {
-			final byte color;
-			switch (token.getType()) {
-				case IDENTIFIER:
-				case SEPARATOR:
-				case OPERATOR:
-					color = 0;
-					break;
-				case KEYWORD:
-				case BOOLEAN_LITERAL:
-				case NULL_LITERAL:
-					color = 36;
-					break;
-				case INTEGER_LITERAL:
-				case FLOATING_POINT_LITERAL:
-					color = 34;
-					break;
-				case CHARACTER_LITERAL:
-				case STRING_LITERAL:
-					color = 32;
-					break;
-				default:
-					color = 0;
-			}
+			final byte color = 0;
+//			switch (token.getValue()) {
+//				case IDENTIFIER:
+//				case SEPARATOR:
+//				case OPERATOR:
+//					color = 0;
+//					break;
+//				case KEYWORD:
+//				case BOOLEAN_LITERAL:
+//				case NULL_LITERAL:
+//					color = 36;
+//					break;
+//				case INTEGER_LITERAL:
+//				case FLOATING_POINT_LITERAL:
+//					color = 34;
+//					break;
+//				case CHARACTER_LITERAL:
+//				case STRING_LITERAL:
+//					color = 32;
+//					break;
+//				default:
+//					color = 0;
+//			}
 			final String text = "\u001B[" + color + "m" + token.getText();
 			switch (token.getValue()) {
 				case SEMICOLON:

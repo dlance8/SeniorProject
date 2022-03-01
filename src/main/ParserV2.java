@@ -1008,20 +1008,7 @@ public class ParserV2 {
 		return accept(Nonterminal.ADDITIVE_EXPRESSION, () -> acceptAll(this::multiplicativeExpression, () -> acceptRepeating(() -> acceptAll(() -> acceptAny(() -> accept(Terminal.ADD), () -> accept(Terminal.SUBTRACT)), this::multiplicativeExpression))));
 	}
 	private boolean multiplicativeExpression() {
-		return accept(Nonterminal.MULTIPLICATIVE_EXPRESSION,
-			() -> acceptAll(this::unaryExpression,
-				() -> acceptRepeating(
-					() -> acceptAll(
-						() -> acceptAny(
-							() -> accept(Terminal.MULTIPLY),
-							() -> accept(Terminal.DIVIDE),
-							() -> accept(Terminal.MODULO)
-						),
-						this::unaryExpression
-					)
-				)
-			)
-		);
+		return accept(Nonterminal.MULTIPLICATIVE_EXPRESSION, () -> acceptAll(this::unaryExpression, () -> acceptRepeating(() -> acceptAll(() -> acceptAny(() -> accept(Terminal.MULTIPLY), () -> accept(Terminal.DIVIDE), () -> accept(Terminal.MODULO)), this::unaryExpression))));
 	}
 	private boolean unaryExpression() {
 		return accept(Nonterminal.UNARY_EXPRESSION, () -> acceptAny(this::preIncrementExpression, this::preDecrementExpression, () -> acceptAll(() -> accept(Terminal.ADD), this::unaryExpression), () -> acceptAll(() -> accept(Terminal.SUBTRACT), this::unaryExpression), this::unaryExpressionNotPlusMinus));

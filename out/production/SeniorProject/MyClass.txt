@@ -1,0 +1,11 @@
+package mypackage;
+import java.util.ArrayList;
+public abstract class MyClass {
+    protected abstract void printSelf();
+}
+class AnotherClass extends MyClass {
+    @Override
+    protected void printSelf() {
+        Object myList = new ArrayList<>();
+    }
+}

@@ -1,8 +1,12 @@
 package main;
+
+import constants.Terminal;
+import constants.TokenType;
+
 /**
- * The main.Token class represents an individual lexeme and is capable of representing identifiers, keywords,
+ * The Token class represents an individual lexeme and is capable of representing identifiers, keywords,
  * operators and reserved words. The token class is used by the lexer and called whenever the lexer
- * detects a new main.Token as each main.Token is separated by a space.
+ * detects a new Token as each Token is separated by a space.
  */
 
 public class Token {
@@ -12,7 +16,7 @@ public class Token {
 	private final String text;
 
 	/**
-	 * Initializes a main.Token
+	 * Initializes a Token
 	 *
 	 * @param type  the type of the token, such as INT or KEYWORD.
 	 * @param value specifies what keyword, operator, or data type the token represents as understood by the parser.
@@ -28,7 +32,7 @@ public class Token {
 		this.col = col;
 	}
 
-	public Token(Void nothing) {
+	public Token() {
 		col = line = -1;
 		value = null;
 		type = null;

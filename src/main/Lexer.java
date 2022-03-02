@@ -1,32 +1,56 @@
 package main;
-import java.io.*;
-import java.util.*;
-public class Lexer {
+import constants.Terminal;
+import constants.TextConstants;
+import constants.TokenType;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.FileNotFoundException;
+import java.io.FileReader;
+import java.util.ArrayList;
+import java.util.HashMap;
+public class Lexer extends MyProcess {
 	private boolean lexing;
 	private char currentChar;
 	private int currentIndex, line, column;
 	private ArrayList<Token> tokens;
 	private String in;
-	private StringBuilder currentString = new StringBuilder();
+	private StringBuilder currentString;
 
-	public ArrayList<Token> lex(String fileName) throws IOException {
-		step1(fileName);
+	public ArrayList<Token> lexFromFile(String fileName) {
+		step0(fileName);
+		return lex(in);
+	}
+	public ArrayList<Token> lex(String input) {
+		in = input;
+		step1();
 		step2();
 		step3();
-		step4();
 		return tokens;
 	}
 
-	private void step1(String fileName) throws IOException {
-		BufferedReader reader = new BufferedReader(new FileReader(fileName));
+	/** Reads the input file as a string of byte values, converts each byte value into a char, and puts each char in a
+	 * StringBuilder. */
+	private void step0(String fileName) {
 		StringBuilder newIn = new StringBuilder();
-		int num;
-		while ((num = reader.read()) != -1) {
-			newIn.append((char) num);
+		try (
+			FileReader fileReader = new FileReader(fileName);
+		    BufferedReader reader = new BufferedReader(fileReader)
+		) {
+			int val;
+			while ((val = reader.read()) != -1) {
+				newIn.append((char) val);
+			}
+		} catch (FileNotFoundException e) {
+			error("File " + fileName + " was not found");
+		} catch (IOException e) {
+			error("Unexpected IO Error occurred while reading " + fileName);
 		}
 		in = newIn.toString();
 	}
-	private void step2() {
+
+	/** Finds all unicode escapes in the input and replaces each with a single char of the unicode value represented by
+	 * the escape. Example: \u0040 --> @ */
+	private void step1() {
 		StringBuilder newIn = new StringBuilder(in.length());
 		start();
 		boolean backslash = false;
@@ -45,7 +69,10 @@ public class Lexer {
 		}
 		in = newIn.toString();
 	}
-	private void step3() {
+
+	/** Finds all line breaks (as defined in the lexical grammar) appearing in the input and replaces each with a single
+	 *  char of value U+000A. */
+	private void step2() {
 		StringBuilder newIn = new StringBuilder();
 		start();
 		while (lexing) {
@@ -58,12 +85,140 @@ public class Lexer {
 		}
 		in = newIn.toString();
 	}
-	private void step4() {
+
+	/** Executes the main lexing process. */
+	private void step3() {
 		start();
 		input();
 	}
 
 
+	private boolean lexError(String message) {
+		super.error("ERROR AT LINE " + line + " COLUMN " + column + "\n" + message);
+		return false;
+	}
+
+	private void start() {
+		line = column = 1;
+		tokens = new ArrayList<>();
+		currentIndex = -1;
+		currentString = new StringBuilder();
+		advance();
+	}
+	private void advance() {
+		if (lexing = currentIndex < in.length() - 1) {
+			column++;
+			currentChar = in.charAt(++currentIndex);
+		} else currentChar = 0;
+	}
+	private boolean acceptAppendAdvance(boolean accepted) {
+		if (accepted &= lexing) {
+			currentString.append(currentChar);
+			advance();
+		}
+		return accepted;
+	}
+	private void newToken(TokenType type, Terminal value) {
+		tokens.add(new Token(type, value, currentString.toString(), line, column));
+	}
+
+	private interface Acceptor {
+		boolean accept();
+	}
+	private boolean accept(Acceptor acceptor) {
+		final boolean wasLexing = lexing;
+		final char oldCurrentChar = currentChar;
+		final int oldCurrentIndex = currentIndex, oldCurrentStringLength = currentString.length(), oldLine = line, oldColumn = column;
+
+		final boolean accepted = acceptor.accept();
+		if (!accepted) {
+			lexing = wasLexing;
+			currentChar = oldCurrentChar;
+			currentIndex = oldCurrentIndex;
+			line = oldLine;
+			column = oldColumn;
+			currentString.setLength(oldCurrentStringLength);
+		}
+		return accepted;
+	}
+	private boolean accept(char value) {
+		return acceptAppendAdvance(currentChar == value);
+	}
+	private void acceptRepeating(Acceptor acceptor) {
+		while (true) if (!accept(acceptor)) break;
+	}
+	private void acceptRepeating(char value) {
+		while (true) if (!accept(value)) break;
+	}
+	private boolean excepting(Acceptor acceptor, char... exceptions) {
+		return accept(() -> {
+			for (char exception : exceptions)
+				if (accept(exception)) return false;
+			return acceptor.accept();
+		});
+	}
+	private boolean acceptAny(char... values) {
+		for (char value : values)
+			if (accept(value)) return true;
+		return false;
+	}
+	private boolean acceptAnyInRange(char min, char max) {
+		return acceptAppendAdvance(min <= currentChar && currentChar <= max);
+	}
+	private boolean acceptNonIdentifierTerminal(TokenType tokenType, HashMap<String, Terminal> hashMap, boolean allowSymbols) {
+		final boolean wasLexing = lexing;
+		final char oldCurrentChar = currentChar;
+		final int oldCurrentIndex = currentIndex;
+		final int oldLine = line, oldColumn = column;
+		final StringBuilder oldCurrentString = currentString;
+
+		boolean isLexingAtBest = lexing;
+		char currentCharAtBest = currentChar;
+		int currentIndexAtBest = currentIndex;
+
+		int lineAtBest = line, columnAtBest = column;
+
+		currentString = new StringBuilder();
+
+		String best = null;
+		for (String key : hashMap.keySet()) {
+			if (best == null || best.length() < key.length()) {
+				boolean accepted = true;
+				for (int i = 0; i < key.length(); ++i) {
+					if (!accept(key.charAt(i))) {
+						accepted = false;
+						break;
+					}
+				}
+				if (accepted) {
+					best = key;
+					isLexingAtBest = lexing;
+					currentCharAtBest = currentChar;
+					currentIndexAtBest = currentIndex;
+					lineAtBest = line;
+					columnAtBest = column;
+				}
+			}
+			lexing = wasLexing;
+			currentChar = oldCurrentChar;
+			currentIndex = oldCurrentIndex;
+			line = oldLine;
+			column = oldColumn;
+			currentString.setLength(0);
+		}
+
+		final boolean accepted = best != null && (allowSymbols || !isLexingAtBest || !Character.isJavaIdentifierStart(currentCharAtBest));
+		if (accepted) {
+			lexing = isLexingAtBest;
+			currentChar = currentCharAtBest;
+			currentIndex = currentIndexAtBest;
+			line = lineAtBest;
+			column = columnAtBest;
+			currentString = oldCurrentString.append(best);
+			newToken(tokenType, hashMap.get(currentString.toString()));
+		}
+		return accepted;
+	}
 
 	private boolean earlyUnicodeEscape() {
 		/* unicode escape = "\" , unicode marker , hex digit , hex digit , hex digit , hex digit ; */
@@ -72,7 +227,7 @@ public class Lexer {
 			if (accepted) {
 				accepted = hexDigit() && hexDigit() && hexDigit() && hexDigit();
 				if (!accepted) {
-					error("illegal unicode escape");
+					lexError("illegal unicode escape");
 				}
 			}
 			return accepted;
@@ -126,7 +281,7 @@ public class Lexer {
 		acceptRepeating(this::inputElement);
 		accept(TextConstants.SUB);
 		if (lexing)
-			error("unexpected symbol");
+			lexError("unexpected symbol");
 	}
 	private boolean inputElement() {
 		/* input element = white space | comment | token ; */
@@ -492,15 +647,15 @@ public class Lexer {
 			if (!accept('\''))
 				return false;
 			else if (!lexing || lineTerminator())
-				return error("unclosed character literal");
+				return lexError("unclosed character literal");
 			else if (accept('\''))
-				return error("empty character literal");
+				return lexError("empty character literal");
 			else if (!(escapeSequence() || rawInputCharacter()))
 				return false; // This cannot happen.
 			else if (!lexing || lineTerminator())
-				return error("unclosed character literal");
+				return lexError("unclosed character literal");
 			else if (!accept('\''))
-				return error("too many characters in character literal");
+				return lexError("too many characters in character literal");
 			else return true;
 		});
 		if (accepted)
@@ -520,7 +675,7 @@ public class Lexer {
 				return false;
 			while (true)
 				if (!lexing || lineTerminator())
-					return error("unclosed string literal");
+					return lexError("unclosed string literal");
 				else if (accept('"'))
 					break;
 				else if (!(escapeSequence() || rawInputCharacter()))
@@ -565,12 +720,10 @@ public class Lexer {
 				octalDigit();
 				return true;
 			} else {
-				return error("illegal escape character");
+				return lexError("illegal escape character");
 			}
 		});
 	}
-
-
 	private boolean digitsOfAnyBase(Acceptor digitAcceptor) {
 		/* digits of base n = digit of base n
 		 *                  | digit of base n , digit of base n ;
@@ -600,151 +753,8 @@ public class Lexer {
 				}
 			}
 			if (!endsWithDigit)
-				error("illegal underscore");
+				lexError("illegal underscore");
 			return endsWithDigit;
 		});
-	}
-	private boolean acceptNonIdentifierTerminal(TokenType tokenType, HashMap<String, Terminal> hashMap, boolean allowSymbols) {
-		final boolean wasLexing = lexing;
-		final char oldCurrentChar = currentChar;
-		final int oldCurrentIndex = currentIndex;
-		final int oldLine = line, oldColumn = column;
-		final StringBuilder oldCurrentString = currentString;
-
-		boolean isLexingAtBest = lexing;
-		char currentCharAtBest = currentChar;
-		int currentIndexAtBest = currentIndex;
-
-		int lineAtBest = line, columnAtBest = column;
-
-		currentString = new StringBuilder();
-
-		String best = null;
-		for (String key : hashMap.keySet()) {
-			if (best == null || best.length() < key.length()) {
-				boolean accepted = true;
-				for (int i = 0; i < key.length(); ++i) {
-					if (!accept(key.charAt(i))) {
-						accepted = false;
-						break;
-					}
-				}
-				if (accepted) {
-					best = key;
-					isLexingAtBest = lexing;
-					currentCharAtBest = currentChar;
-					currentIndexAtBest = currentIndex;
-					lineAtBest = line;
-					columnAtBest = column;
-				}
-			}
-			lexing = wasLexing;
-			currentChar = oldCurrentChar;
-			currentIndex = oldCurrentIndex;
-			line = oldLine;
-			column = oldColumn;
-			currentString.setLength(0);
-		}
-
-		final boolean accepted = best != null && (allowSymbols || !isLexingAtBest || !Character.isJavaIdentifierStart(currentCharAtBest));
-		if (accepted) {
-			lexing = isLexingAtBest;
-			currentChar = currentCharAtBest;
-			currentIndex = currentIndexAtBest;
-			line = lineAtBest;
-			column = columnAtBest;
-			currentString = oldCurrentString.append(best);
-			newToken(tokenType, hashMap.get(currentString.toString()));
-		}
-		return accepted;
-	}
-
-
-	private interface Acceptor { boolean accept(); }
-
-	private boolean accept(Acceptor acceptor) {
-
-		final boolean wasLexing = lexing;
-		final char oldCurrentChar = currentChar;
-		final int oldCurrentIndex = currentIndex, oldCurrentStringLength = currentString.length();
-		final int oldLine = line, oldColumn = column;
-
-		final boolean accepted = acceptor.accept();
-		if (!accepted) {
-			lexing = wasLexing;
-			currentChar = oldCurrentChar;
-			currentIndex = oldCurrentIndex;
-			line = oldLine;
-			column = oldColumn;
-			currentString.setLength(oldCurrentStringLength);
-		}
-		return accepted;
-	}
-	private boolean accept(char value) {
-		return acceptAppendAdvance(currentChar == value);
-	}
-	private void acceptRepeating(Acceptor acceptor) {
-		while (true) {
-			if (!accept(acceptor)) {
-				break;
-			}
-		}
-	}
-	private void acceptRepeating(char value) {
-		while (true) {
-			if (!accept(value)) {
-				break;
-			}
-		}
-	}
-	private boolean excepting(Acceptor acceptor, char... exceptions) {
-		return accept(() -> {
-			for (char exception : exceptions)
-				if (accept(exception)) return false;
-			return acceptor.accept();
-		});
-	}
-	private boolean acceptAny(char... values) {
-		for (char value : values)
-			if (accept(value)) return true;
-		return false;
-	}
-	private boolean acceptAnyInRange(char min, char max) {
-		return acceptAppendAdvance(min <= currentChar && currentChar <= max);
-	}
-
-
-	private boolean error(String message) {
-		System.err.println("ERROR AT LINE " + line + " COLUMN " + column + "\n" + message);
-		Thread.currentThread().interrupt();
-		System.exit(1);
-		return false;
-	}
-	private void start() {
-		line = column = 1;
-		tokens = new ArrayList<>();
-		currentIndex = -1;
-		currentString.setLength(0);
-		advance();
-	}
-	private void advance() {
-		lexing = currentIndex < in.length() - 1;
-		if (lexing) {
-			currentIndex++;
-			column++;
-			currentChar = in.charAt(currentIndex);
-		} else {
-			currentChar = 0;
-		}
-	}
-	private boolean acceptAppendAdvance(boolean accepted) {
-		if (accepted &= lexing) {
-			currentString.append(currentChar);
-			advance();
-		}
-		return accepted;
-	}
-	private void newToken(TokenType type, Terminal value) {
-		tokens.add(new Token(type, value, currentString.toString(), line, column));
 	}
 }

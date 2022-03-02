@@ -14,7 +14,7 @@ public class TreeTightener {
 				parent.getChildren().set(i, onlyChild);
 		}
 	}
-	public TreeNode onlyChild(TreeNode node) {
+	private TreeNode onlyChild(TreeNode node) {
 		if (!(node instanceof NonterminalNode)) return null;
 		NonterminalNode parent = (NonterminalNode) node;
 		return parent.size() == 1 ? parent.getChildren().get(0) : null;

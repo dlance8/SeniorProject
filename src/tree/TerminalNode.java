@@ -1,5 +1,5 @@
 package tree;
-import main.Terminal;
+import constants.Terminal;
 import main.Token;
 
 public class TerminalNode implements TreeNode {

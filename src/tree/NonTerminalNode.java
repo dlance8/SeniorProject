@@ -1,6 +1,6 @@
 package tree;
 
-import main.Nonterminal;
+import constants.Nonterminal;
 
 import java.util.ArrayList;
 import java.util.EnumMap;

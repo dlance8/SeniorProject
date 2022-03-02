@@ -426,7 +426,7 @@ CatchClause = "catch" , "(" , CatchFormalParameter , ")" , Block ;
 
 CatchFormalParameter = { VariableModifier } , CatchType , VariableDeclaratorId ;
 
-CatchType = "UnannClassType" , { "|" , ClassType } ;
+CatchType = UnannClassType , { "|" , ClassType } ;
 
 Finally = "finally" , Block ;
 

@@ -1,11 +1,14 @@
 package main;
+import constants.Nonterminal;
+import constants.Terminal;
+import constants.TokenType;
 import tree.NonterminalNode;
 import tree.TerminalNode;
 import java.io.IOException;
 import java.util.ArrayList;
 public class SimpleParser {
 	public static void main(String[] args) throws IOException {
-		ArrayList<Token> tokens = new Lexer().lex("in/MyClass.java");
+		ArrayList<Token> tokens = new Lexer().lexFromFile("in/MyClass.java");
 
 		for (Token token : tokens)
 			System.out.println(token);
@@ -108,7 +111,7 @@ public class SimpleParser {
 		advance();
 	}
 	private void advance() {
-		currentToken = (parsing = ++currentIndex < tokens.size()) ? tokens.get(currentIndex) : new Token(null);
+		currentToken = (parsing = ++currentIndex < tokens.size()) ? tokens.get(currentIndex) : new Token();
 	}
 	private boolean acceptAppendAdvance(boolean accepted) {
 		if (accepted &= parsing) {

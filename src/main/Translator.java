@@ -40,7 +40,6 @@ public class Translator {
 		// ClassDeclaration = NormalClassDeclaration
 		//                  | EnumDeclaration ;
 		normalClassDeclaration(parent.getNonTerminalChild(0));
-//		print(parent.getNonTerminalChild(0).toString());
 	}
 	private void normalClassDeclaration(NonterminalNode parent) {
 		// NormalClassDeclaration = { ClassModifier } , "class" , Identifier , [ TypeParameters ] , [ Superclass ] , [ Superinterfaces ] , ClassBody ;
@@ -131,21 +130,18 @@ public class Translator {
 	private void methodBody(NonterminalNode parent){
 		//MethodBody = Block
 		//           | ";" ;
-//		print(parent.getNonTerminalChild(0).toString());
 		NonterminalNode child = parent.getNonTerminalChild(0);
 		block(child);
 	}
 
 	private void block(NonterminalNode parent){
 		// Block = "{" , [ BlockStatements ] , "}" ;
-//		print(parent.getNonTerminalChild(1).toString());
 		NonterminalNode child = parent.getNonTerminalChild(1);
 		blockStatements(child);
 	}
 
 	private void blockStatements(NonterminalNode parent){
 		// BlockStatements = BlockStatement , { BlockStatement } ;
-//		print(parent.getNonTerminalChild(0).toString());
 		NonterminalNode child = parent.getNonTerminalChild(0);
 		blockStatement(child);
 	}

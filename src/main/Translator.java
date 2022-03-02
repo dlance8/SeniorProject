@@ -90,6 +90,7 @@ public class Translator {
 				classMemberDeclaration(child);
 				break;
 			case INSTANCE_INITIALIZER:
+				break;
 			case STATIC_INITIALIZER:
 				// skip, don't support these
 				break;

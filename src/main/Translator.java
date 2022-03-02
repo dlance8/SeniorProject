@@ -1,4 +1,5 @@
-package main;//package main;
+package main;
+// package main;
 import tree.NonterminalNode;
 import tree.TerminalNode;
 import tree.TreeNode;
@@ -7,7 +8,7 @@ import java.io.IOException;
 
 public class Translator {
 	public static void main(String[] args) throws IOException {
-		new Translator().translate(new ParserV2(new Lexer().lex("in/MyClass.java")).parse());
+		new Translator().translate(new ParserV2(new Lexer().lex("in/Example2.java")).parse());
 	}
 
 
@@ -29,7 +30,7 @@ public class Translator {
 	}
 
 	private void typeDeclaration(NonterminalNode parent) {
-    //TypeDeclaration = ClassDeclaration
+    // TypeDeclaration = ClassDeclaration
     //                | InterfaceDeclaration
     //                | ";" ;
 
@@ -39,6 +40,7 @@ public class Translator {
 		// ClassDeclaration = NormalClassDeclaration
 		//                  | EnumDeclaration ;
 		normalClassDeclaration(parent.getNonTerminalChild(0));
+//		print(parent.getNonTerminalChild(0).toString());
 	}
 	private void normalClassDeclaration(NonterminalNode parent) {
 		// NormalClassDeclaration = { ClassModifier } , "class" , Identifier , [ TypeParameters ] , [ Superclass ] , [ Superinterfaces ] , ClassBody ;
@@ -111,10 +113,126 @@ public class Translator {
 			case FIELD_DECLARATION:
 //				fieldDeclaration(child);
 				break;
+			case METHOD_DECLARATION:
+				methodDeclaration(child);
 		}
 	}
 	private void constructorDeclaration(NonterminalNode parent) {
 
+	}
+
+	private void methodDeclaration(NonterminalNode parent){
+		// MethodDeclaration = { MethodModifier } , MethodHeader , MethodBody ;
+		NonterminalNode child = parent.getNonTerminalChild(3);
+		methodBody(child);
+//		print(parent.getChildren().toString());
+	}
+
+	private void methodBody(NonterminalNode parent){
+		//MethodBody = Block
+		//           | ";" ;
+//		print(parent.getNonTerminalChild(0).toString());
+		NonterminalNode child = parent.getNonTerminalChild(0);
+		block(child);
+	}
+
+	private void block(NonterminalNode parent){
+		// Block = "{" , [ BlockStatements ] , "}" ;
+//		print(parent.getNonTerminalChild(1).toString());
+		NonterminalNode child = parent.getNonTerminalChild(1);
+		blockStatements(child);
+	}
+
+	private void blockStatements(NonterminalNode parent){
+		// BlockStatements = BlockStatement , { BlockStatement } ;
+//		print(parent.getNonTerminalChild(0).toString());
+		NonterminalNode child = parent.getNonTerminalChild(0);
+		blockStatement(child);
+	}
+
+	private void blockStatement(NonterminalNode parent){
+		// BlockStatement = LocalVariableDeclarationStatement
+		//               | ClassDeclaration
+		//               | Statement ;
+		NonterminalNode child = parent.getNonTerminalChild(0);
+
+		switch (child.getValue()) {
+			case LOCAL_VARIABLE_DECLARATION_STATEMENT:
+			case CLASS_DECLARATION:
+			case STATEMENT:
+				statement(child);
+		}
+	}
+
+	private void statement(NonterminalNode parent) {
+//		Statement = StatementWithoutTrailingSubstatement
+//				| LabeledStatement
+//				| IfThenStatement
+//				| IfThenElseStatement
+//				| WhileStatement
+//				| ForStatement ;
+		NonterminalNode child = parent.getNonTerminalChild(0);
+		switch (child.getValue()){
+			case STATEMENT_WITHOUT_TRAILING_SUBSTATEMENT:
+				statementWithoutTrailingSubstatement(child);
+		}
+	}
+
+	private void statementWithoutTrailingSubstatement(NonterminalNode parent){
+//		StatementWithoutTrailingSubstatement = Block
+//				| EmptyStatement
+//				| ExpressionStatement
+//				| AssertStatement
+//				| SwitchStatement
+//				| DoStatement
+//				| BreakStatement
+//				| ContinueStatement
+//				| ReturnStatement
+//				| SynchronizedStatement
+//				| ThrowStatement
+//				| TryStatement ;
+		NonterminalNode child = parent.getNonTerminalChild(0);
+		switch (child.getValue()){
+			case EXPRESSION_STATEMENT:
+				expressionStatement(child);
+		}
+	}
+
+	private void expressionStatement(NonterminalNode parent){
+//		ExpressionStatement = StatementExpression , ";" ;
+		NonterminalNode child = parent.getNonTerminalChild(0);
+		statementExpression(child);
+		}
+
+	private void statementExpression(NonterminalNode parent){
+//		StatementExpression = Assignment
+//				| PreIncrementExpression
+//				| PreDecrementExpression
+//				| PostIncrementExpression
+//				| PostDecrementExpression
+//				| MethodInvocation
+//				| ClassInstanceCreationExpression ;
+		NonterminalNode child = parent.getNonTerminalChild(0);
+		switch(child.getValue()){
+			case METHOD_INVOCATION:
+				methodInvocation(child);
+		}
+	}
+
+	private void methodInvocation(NonterminalNode parent) {
+//		MethodInvocation = MethodName , "(" , [ArgumentList ] , ")"
+//				| TypeName , "." , [ TypeArguments ] , Identifier , "(" , [ ArgumentList ] , ")"
+//				| ExpressionName , "." , [ TypeArguments ] , Identifier , "(" , [ArgumentList ] , ")"
+//				| Primary , "." , [ TypeArguments ] , Identifier , "(" , [ArgumentList ] , ")"
+//				| "super" , "." , [ TypeArguments ] , Identifier , "(" , [ArgumentList ] , ")"
+//				| TypeName , "." , "super" , "." , [ TypeArguments ] , Identifier , "(" , [ArgumentList ] , ")" ;
+
+		NonterminalNode child = (parent.getNonTerminalChild(6));
+		expression(child);
+	}
+
+	private void expression(NonterminalNode parent){
+		NonterminalNode child = (parent.getNonTerminalChild(0));
 	}
 
 

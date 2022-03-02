@@ -9,7 +9,7 @@ import java.util.LinkedList;
 
 public class EbnfToJava {
 	public static void main(String[] args) {
-		NonterminalNode root = new Parser(new Lexer("in/SimpleEBNF.txt")).parse();
+		NonterminalNode root = new Parser(new Lexer("in/ebnf.txt")).parse();
 
 		new TreeTightener().tighten(root);
 

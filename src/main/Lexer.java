@@ -9,6 +9,12 @@ public class Lexer {
 	private String in;
 	private StringBuilder currentString = new StringBuilder();
 
+	/**
+	 * This file ...
+	 *  step1 serves this purpose... step 2 does this... etc
+	 *
+	 */
+
 	public ArrayList<Token> lex(String fileName) throws IOException {
 		step1(fileName);
 		step2();
@@ -31,6 +37,8 @@ public class Lexer {
 		start();
 		boolean backslash = false;
 		while (lexing) {
+
+			// backslash && earlyUnicodeEscape ?
 			if (!backslash && earlyUnicodeEscape()) {
 				// currentString is unicode escape backslash
 				newIn.append((char) Integer.parseInt(currentString.substring(2), 16));

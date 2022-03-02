@@ -1,5 +1,3 @@
-package examples;// user input, variable assignments, arithmetic, and string concatenation
-
 public class Example2 {
     public static void main(String[] args) {
 

@@ -1,0 +1,29 @@
+CompilationUnit = ClassDeclaration ;
+
+ClassDeclaration = { ClassModifier } , "class" , ClassName , [ SuperClass ] , [ SuperInterfaces ] , ClassBody ;
+
+ClassModifier = "public" | "protected" | "private" | "abstract" | "static" ;
+
+ClassName = Identifier ;
+
+SuperClass = "extends" , ClassName ;
+
+SuperInterfaces = "implements" , InterfaceName , { "," , InterfaceName } ;
+
+InterfaceName = Identifier ;
+
+ClassBody = "{" , { ClassMemberDeclaration } , "}" ;
+
+ClassMemberDeclaration = MainMethodDeclaration
+                       | ";" ;
+
+MainMethodDeclaration = "public" , "static" , "void" , "main" , "(" , "String" , "[" , "]" , Identifier , ")" , MethodBody ;
+
+MethodBody = "{" , { MethodStatement } , "}" ;
+
+MethodStatement = PrintStatement
+                | ";" ;
+
+PrintStatement = "System" , "." , "out" , "." , "println" , "(" , Expression , ")" , ";" ;
+
+Expression = Literal ;

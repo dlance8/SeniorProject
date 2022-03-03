@@ -1,24 +1,17 @@
 package tree;
 import constants.Terminal;
 import main.Token;
-
-public class TerminalNode implements TreeNode {
-	private final Token token;
+public class TerminalNode extends Token implements TreeNode {
 	public TerminalNode(Token token) {
-		this.token = token;
-	}
-	public Terminal getValue() {
-		return token.getValue();
+		super(token);
 	}
 	@Override
 	public String valueString() {
-		return token.getType().toString() + ": " + token.getText();
+		final char quotes = getValue() == Terminal.STRING_LITERAL ? '\'' : '"';
+		return "\u001B[32m" + getType() + " | " + getValue() + " | " + quotes + getText() + quotes + "\u001B[0m";
 	}
 	@Override
 	public String toString() {
 		return valueString();
-	}
-	public Token getToken() {
-		return token;
 	}
 }

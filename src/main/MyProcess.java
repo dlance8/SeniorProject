@@ -1,5 +1,5 @@
 package main;
-public class MyProcess {
+public abstract class MyProcess {
 	private String errorMessage;
 	protected void error(String errorMessage) {
 		this.errorMessage = errorMessage;

@@ -1,4 +1,4 @@
-package GUI;
+package app;
 import javafx.application.Application;
 import javafx.beans.binding.DoubleBinding;
 import javafx.scene.Scene;
@@ -13,7 +13,7 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.PrintWriter;
 import java.util.Scanner;
-public class GUI extends Application {
+public class MyApp extends Application {
 	private boolean javaIsSaved = true, pythonIsSaved = true;
 	private File javaFile, pythonFile;
 	private Stage primaryStage;
@@ -21,10 +21,6 @@ public class GUI extends Application {
 	private final TextArea javaArea = new TextArea(), pythonArea = new TextArea();
 
 	private final Alert alert = new Alert(null, "Unsaved Java and Python code will be lost.", ButtonType.OK, ButtonType.CANCEL);
-
-	public static void main(String[] args) {
-		launch(args);
-	}
 
 	@Override
 	public void start(Stage primaryStage) {

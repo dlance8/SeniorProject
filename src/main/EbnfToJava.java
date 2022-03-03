@@ -1,108 +1,81 @@
 package main;
+import constants.Nonterminal;
+import constants.Terminal;
+import constants.TextConstants;
+import tree.NonterminalNode;
+import tree.TerminalNode;
+import tree.TreeNode;
 import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;
-import java.io.PrintWriter;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedList;
-
 public class EbnfToJava {
 	public static void main(String[] args) {
-		NonterminalNode root = new Parser(new Lexer("in/ebnf.txt")).parse();
-		//System.out.println(root);
-		new TreeTightener().tighten(root);
+		EbnfParser parser = new EbnfParser();
+		NonterminalNode root = parser.parse(new EbnfLexer("in/ebnf.txt"));
 
-		//System.out.println("\n\n" + root);
+		root.tighten();
 
-		//System.out.println("\n\n" + new Translator().translate(root));
+		String result = new EbnfTranslator().translate(root, parser.ruleComments);
 
-		try {
-			PrintWriter x = new PrintWriter("in/out.txt");
-			x.println(new Translator().translate(root));
-			x.close();
-		} catch (IOException e)
-		{
-			e.printStackTrace();
-		}
-		System.out.println(1);
+		System.out.println(result);
+		int x = 0;
+		(x)++;
 	}
 
-	private static class TreeTightener {
-		void tighten(TreeNode node) {
-			if (!(node instanceof NonterminalNode)) return;
-			NonterminalNode parent = (NonterminalNode) node;
-
-			for (TreeNode child : parent)
-				tighten(child);
-
-			for (int i = 0; i < parent.size(); ++i) {
-				TreeNode onlyChild = onlyChild(parent.get(i));
-				if (onlyChild != null)
-					parent.set(i, onlyChild);
-			}
-		}
-		TreeNode onlyChild(TreeNode node) {
-			if (!(node instanceof NonterminalNode)) return null;
-			NonterminalNode parent = (NonterminalNode) node;
-			switch (parent.value) {
-				case OPTIONAL:
-				case REPEATING:
-					return null;
-			}
-			return parent.size() == 1 ? parent.get(0) : null;
-		}
+	private static void error(String message) {
+		System.err.println(message);
+		System.exit(1);
 	}
 
-	private static class Translator {
-		StringBuilder javaCode;
-		String translate(NonterminalNode grammar) {
-			if (grammar.value != Nonterminal.GRAMMAR)
+	private static class EbnfTranslator {
+		StringBuilder enumList, javaCode;
+		String translate(NonterminalNode grammar, LinkedList<String> ruleComments) {
+			if (grammar.getValue() != Nonterminal.GRAMMAR)
 				return null;
 
 			LinkedList<String> enumValues = new LinkedList<>();
 
 			javaCode = new StringBuilder();
+
+			int i = 0;
 			for (TreeNode child : grammar) {
 				NonterminalNode rule = (NonterminalNode) child; // Instance is guaranteed by the Parser
 
-				String identifier = rule.getTerminal(0).text;
-				String lowerCase = toCase1(identifier);
+				String identifier = rule.getTerminalChild(0).getText();
 				String allCaps = toCase2(identifier);
 
 				enumValues.add(allCaps);
 
-				//javaCode.append("private boolean ").append(lowerCase).append("() {\n\treturn accept(Nonterminal.").append(allCaps).append(",\n");
-				javaCode.append("private boolean ").append(lowerCase).append("() {\n\treturn accept(Nonterminal.").append(allCaps).append(", ");
+				//javaCode.append("private void ").append(toCase1(identifier)).append("(NonterminalNode parent) {\n").append(ruleComments.get(i++)).append("\n\terror(\"Nonterminal \" + parent.getValue() + \" is not supported.\");\n}\n");
 
+				javaCode.append("private boolean ").append(toCase1(identifier)).append("() {\n\treturn accept(Nonterminal.").append(allCaps).append(", ");
 
-				a(rule.get(1), new StringBuilder("\t"));
+				a(rule.get(1));
 
 				javaCode.setLength(javaCode.length() - 2);
 
-				//javaCode.append("\n\t);\n}\n");
 				javaCode.append(");\n}\n");
 			}
 
-			System.out.println();
+			enumList = new StringBuilder();
 			for (String enumValue : enumValues)
-				System.out.print(enumValue + ", ");
-			System.out.println();
+				enumList.append(enumValue).append(", ");
 
-			return javaCode.toString();
+			return enumList + "\n\n" + javaCode;
 		}
-		void a(TreeNode node, StringBuilder indent) {
-			//javaCode.append(indent.append('\t'));
+		void a(TreeNode node) {
 			if (node instanceof TerminalNode) {
 				TerminalNode terminalNode = (TerminalNode) node;
-				switch (terminalNode.type) {
+				switch (terminalNode.getValue()) {
 					case IDENTIFIER:
-						javaCode.append("this::").append(toCase1(terminalNode.text));
+						javaCode.append("this::").append(toCase1(terminalNode.getText()));
 						break;
 					case STRING_LITERAL:
 						boolean found = false;
-						for (HashMap<String, main.Terminal> map : TextConstants.ALL_MAPS) {
-							main.Terminal value = map.get(terminalNode.text);
+						for (HashMap<String, Terminal> map : TextConstants.ALL_MAPS) {
+							Terminal value = map.get(terminalNode.getText());
 							if (value != null) {
 								found = true;
 								javaCode.append("() -> accept(Terminal.").append(value).append(')');
@@ -110,37 +83,31 @@ public class EbnfToJava {
 							}
 						}
 						if (!found) {
-							javaCode.append("() -> identifier(\"").append(terminalNode.text).append("\")");
+							javaCode.append("() -> identifier(\"").append(terminalNode.getText()).append("\")");
 						}
 						break;
 				}
 			} else {
 				NonterminalNode nonterminalNode = (NonterminalNode) node;
 				boolean acceptChildren = false;
-				switch (nonterminalNode.value) {
+				switch (nonterminalNode.getValue()) {
 					case OPTIONAL:
-						//javaCode.append("() -> acceptOptional(\n");
 						javaCode.append("() -> acceptOptional(");
-						a(nonterminalNode.get(0), indent);
+						a(nonterminalNode.get(0));
 						break;
 					case REPEATING:
-						//javaCode.append("() -> acceptRepeating(\n");
 						javaCode.append("() -> acceptRepeating(");
-						a(nonterminalNode.get(0), indent);
+						a(nonterminalNode.get(0));
 						break;
 					case GROUPING:
-						// GROUPING IS NEVER ACTUALLY SEEN
-						//javaCode.append("() -> accept(\n");
 						javaCode.append("() -> accept(");
-						a(nonterminalNode.get(0), indent);
+						a(nonterminalNode.get(0));
 						break;
 					case EXPRESSION:
-						//javaCode.append("acceptAny(\n");
 						javaCode.append("() -> acceptAny(");
 						acceptChildren = true;
 						break;
 					case SUBEXPRESSION:
-						//javaCode.append("acceptAll(\n");
 						javaCode.append("() -> acceptAll(");
 						acceptChildren = true;
 						break;
@@ -148,29 +115,20 @@ public class EbnfToJava {
 				if (acceptChildren) {
 					if (nonterminalNode.size() > 0 ) {
 						for (TreeNode child : nonterminalNode) {
-							a(child, indent);
+							a(child);
 						}
 					}
 				}
-				//javaCode.deleteCharAt(javaCode.length() - 2);
 				javaCode.setLength(javaCode.length() - 2);
-				//javaCode.append(indent).append(")");
 				javaCode.append(")");
 			}
-			//indent.setLength(indent.length() - 1);
-			//javaCode.append(",\n");
 			javaCode.append(", ");
-		}
-		boolean translateTerminal(TreeNode node) {
-			if (!(node instanceof TerminalNode)) return false;
-			TerminalNode terminalNode = (TerminalNode) node;
-			return true;
 		}
 		String toCase1(String string) {
 			StringBuilder stringBuilder = new StringBuilder(string);
 			stringBuilder.setCharAt(0, Character.toLowerCase(stringBuilder.charAt(0)));
 
-			for (HashMap<String, main.Terminal> map : TextConstants.ALL_MAPS) {
+			for (HashMap<String, Terminal> map : TextConstants.ALL_MAPS) {
 				if (map.containsKey(stringBuilder.toString())) {
 					stringBuilder.append('_');
 					break;
@@ -192,13 +150,112 @@ public class EbnfToJava {
 			return stringBuilder.toString();
 		}
 	}
+	private static class EbnfParser {
+		boolean parsing;
+		EbnfLexer lexer;
+		LinkedList<String> ruleComments;
+		Token currentToken;
+		NonterminalNode parse(EbnfLexer lexer) {
+			this.lexer = lexer;
 
-	private static final class Lexer {
+			parsing = true;
+			ruleComments = new LinkedList<>();
+			currentToken = lexer.nextToken();
+			NonterminalNode grammar = new NonterminalNode(Nonterminal.GRAMMAR);
+			while (true)
+				if (!rule(grammar)) break;
+			return grammar;
+		}
+		boolean rule(NonterminalNode parent) {
+			final NonterminalNode child = new NonterminalNode(Nonterminal.RULE);
+			final boolean accepted = accept(child, Terminal.IDENTIFIER) && expect("=") && expression(child) && expect(";");
+			if (accepted) {
+				parent.add(child);
+				ruleComments.add(lexer.copyRuleToComment());
+			}
+			return accepted;
+		}
+		boolean expression(NonterminalNode parent) {
+			final NonterminalNode child = new NonterminalNode(Nonterminal.EXPRESSION);
+			final boolean accepted = subexpression(child);
+			if (accepted) {
+				while (true) {
+					if (accept("|"))
+						subexpression(child);
+					else break;
+				}
+				parent.add(child);
+			}
+			lexer.setIndexOfNextRule();
+			return accepted;
+		}
+		boolean subexpression(NonterminalNode parent) {
+			final NonterminalNode child = new NonterminalNode(Nonterminal.SUBEXPRESSION);
+			final boolean accepted = element(child);
+			if (accepted) {
+				while (true) {
+					if (accept(","))
+						element(child);
+					else break;
+				}
+				parent.add(child);
+			}
+			return accepted;
+		}
+		boolean element(NonterminalNode parent) {
+			enforceInput();
+			if (accept(parent, Terminal.IDENTIFIER) || accept(parent, Terminal.STRING_LITERAL)) return true;
+			switch (currentToken.getText()) {
+				case "[": return otherElementType(parent, Nonterminal.OPTIONAL, "[", "]");
+				case "{": return otherElementType(parent, Nonterminal.REPEATING, "{", "}");
+				case "(": return otherElementType(parent, Nonterminal.GROUPING, "(", ")");
+			}
+			error("Unexpected symbol.");
+			return false;
+		}
+		boolean otherElementType(NonterminalNode parent, Nonterminal value, String open, String close) {
+			NonterminalNode child = new NonterminalNode(value);
+			accept(open);
+			final boolean accepted = expression(child);
+			if (accepted) {
+				enforceInput();
+				expect(close);
+				parent.add(child);
+			}
+			return accepted;
+		}
+
+		boolean expect(String text) {
+			final boolean accepted = accept(text);
+			if (!accepted)
+				error("Expected \"" + text + "\"" + ". Got \"" + currentToken.getText() + "\" at line " + currentToken.getLine());
+			return accepted;
+		}
+		boolean accept(NonterminalNode parent, Terminal value) {
+			final boolean accepted = parsing && currentToken.getValue() == value;
+			if (accepted) {
+				parent.add(new TerminalNode(currentToken));
+				parsing = (currentToken = lexer.nextToken()) != null;
+			}
+			return accepted;
+		}
+		boolean accept(String text) {
+			final boolean accepted = parsing && currentToken.getValue() == Terminal.SYMBOL && currentToken.getText().equals(text);
+			if (accepted)
+				parsing = (currentToken = lexer.nextToken()) != null;
+			return accepted;
+
+		}
+		void enforceInput() {
+			if (!parsing) error("Unexpected end of input.");
+		}
+	}
+	private static final class EbnfLexer {
 		boolean lexing;
 		char currentChar;
-		int currentIndex, line, column;
+		int currentIndex, currentIndex2, line, column, indexOfNextRule;
 		String in;
-		Lexer(String fileName) {
+		EbnfLexer(String fileName) {
 			try {
 				BufferedReader reader = new BufferedReader(new FileReader(fileName));
 				StringBuilder newIn = new StringBuilder();
@@ -209,6 +266,7 @@ public class EbnfToJava {
 			}
 			lexing = true;
 			currentIndex = -1;
+			currentIndex2 = 0;
 			advance();
 		}
 		Token nextToken() {
@@ -248,7 +306,7 @@ public class EbnfToJava {
 				do {
 					token.append(currentChar);
 					advance();
-				} while (lexing && isLetterOrMore());
+				} while (lexing && isLetterOrDigitOrUnderscore());
 				text = token.toString();
 				type = Terminal.IDENTIFIER;
 			} else {
@@ -256,230 +314,72 @@ public class EbnfToJava {
 				return null;
 			}
 
-			Token t = new Token(type, text, line, 0);
-			System.out.println(text);
-			return t;
+			return new Token(null, type, text, line, 0);
 		}
-		private void advance() {
+		void advance() {
 			currentChar = (lexing = ++currentIndex < in.length()) ? in.charAt(currentIndex) : 0;
 		}
-		private boolean isLetter() {
+		boolean isLetter() {
 			return (65 <= currentChar && currentChar <= 90) || (97 <= currentChar && currentChar <= 122);
 		}
-		private boolean isLetterOrMore() {
+		boolean isLetterOrDigitOrUnderscore() {
 			return isLetter() || (48 <= currentChar && currentChar <= 57) || currentChar == '_';
 		}
-		private boolean isWhitespace() {
+		boolean isWhitespace() {
 			return Character.isWhitespace(currentChar);
 		}
-		private boolean isSymbol() {
+		boolean isSymbol() {
 			switch (currentChar) {
-				case '=': case '|': case ',': case ';': case '[': case ']': case '{': case '}': case '(': case ')':
+				case '=':
+				case '|':
+				case ',':
+				case ';':
+				case '[':
+				case ']':
+				case '{':
+				case '}':
+				case '(':
+				case ')':
 					return true;
-				default: return false;
+				default:
+					return false;
 			}
 		}
-		private void x() {
-			String base = in.substring(currentIndex);
-			System.out.println(base.substring(0, base.indexOf('=')));
-		}
-	}
+		String copyRuleToComment() {
+			while (currentIndex2 < indexOfNextRule && isLineBreak(in.charAt(currentIndex2)))
+				currentIndex2++;
 
-	private static class Parser {
-		final Lexer lexer;
-		boolean parsing;
-		Token currentToken;
-		Parser(Lexer lexer) {
-			this.lexer = lexer;
-		}
-		NonterminalNode parse() {
-			parsing = true;
-			currentToken = lexer.nextToken();
-			NonterminalNode grammar = new NonterminalNode(Nonterminal.GRAMMAR);
+			if (currentIndex2 >= indexOfNextRule) return "";
+
+			StringBuilder rule = new StringBuilder(indexOfNextRule - currentIndex2 + 20).append("\t// ");
+
+			char nextChar = in.charAt(currentIndex2);
 			while (true) {
-				NonterminalNode rule = new NonterminalNode(Nonterminal.RULE);
-				final boolean acceptingRule = accept(rule, Terminal.IDENTIFIER);
-				if (!acceptingRule) break;
-				expect(rule, "=");
-				expression(rule);
-				expect(rule, ";");
-				grammar.add(rule);
-			}
-			return grammar;
-		}
-		boolean expression(NonterminalNode parent) {
-			final NonterminalNode child = new NonterminalNode(Nonterminal.EXPRESSION);
-			final boolean accepted = subexpression(child);
-			if (accepted) {
-				while (true) {
-					if (accept(child, "|"))
-						subexpression(child);
-					else break;
-				}
-				parent.add(child);
-			}
-			return accepted;
-		}
-		boolean subexpression(NonterminalNode parent) {
-			final NonterminalNode child = new NonterminalNode(Nonterminal.SUBEXPRESSION);
-			final boolean accepted = element(child);
-			if (accepted) {
-				while (true) {
-					if (accept(child, ","))
-						element(child);
-					else break;
-				}
-				parent.add(child);
-			}
-			return accepted;
-		}
-		boolean element(NonterminalNode parent) {
-			enforceInput();
-			if (accept(parent, Terminal.IDENTIFIER) || accept(parent, Terminal.STRING_LITERAL)) return true;
-			switch (currentToken.text) {
-				case "[": return otherElementType(parent, Nonterminal.OPTIONAL, "[", "]");
-				case "{": return otherElementType(parent, Nonterminal.REPEATING, "{", "}");
-				case "(": return otherElementType(parent, Nonterminal.GROUPING, "(", ")");
-			}
-			error("Unexpected symbol.");
-			return false;
-		}
-		boolean otherElementType(NonterminalNode parent, Nonterminal value, String open, String close) {
-			NonterminalNode child = new NonterminalNode(value);
-			accept(child, open);
-			final boolean accepted = expression(child);
-			if (accepted) {
-				enforceInput();
-				expect(child, close);
-				parent.add(child);
-			}
-			return accepted;
-		}
-
-		void expect(NonterminalNode parent, String text) {
-			if (!accept(parent, text)) {
-				lexer.x();
-				System.out.println(text);
-				System.exit(1);
-				error("Expected \"" + text + "\"" + ". Got \"" + currentToken.text + "\" at line " + currentToken.line);
-			}
-		}
-		boolean accept(NonterminalNode parent, Terminal type) {
-			final boolean accepted = parsing && currentToken.type == type;
-			if (accepted) {
-				parent.add(new TerminalNode(currentToken));
-				parsing = (currentToken = lexer.nextToken()) != null;
-			}
-			return accepted;
-		}
-		boolean accept(NonterminalNode parent, String text) {
-			final boolean accepted = parsing && currentToken.type == Terminal.SYMBOL && currentToken.text.equals(text);
-			if (accepted) {
-				//parent.add(new TerminalNode(currentToken));
-				parsing = (currentToken = lexer.nextToken()) != null;
-			}
-			return accepted;
-
-		}
-		void enforceInput() {
-			if (!parsing) error("Unexpected end of input.");
-		}
-	}
-
-	private static void error(String message) {
-		System.err.println(message);
-		System.exit(1);
-	}
-
-	private enum Terminal {
-		IDENTIFIER, STRING_LITERAL, SYMBOL
-	}
-	private enum Nonterminal {
-		EXPRESSION, GRAMMAR, GROUPING, OPTIONAL, REPEATING, RULE, SUBEXPRESSION,
-	}
-
-	private static class Token {
-		final int line, column;
-		final String text;
-		final Terminal type;
-		Token(Terminal type, String text, int line, int column) {
-			this.text = text;
-			this.type = type;
-			this.line = line;
-			this.column = column;
-		}
-	}
-
-	interface TreeNode {
-		String valueString();
-		default void buildString(StringBuilder full, StringBuilder indent, boolean isLastChild) {
-			full.append(indent).append(isLastChild ? '\u2514' : '\u251c').append("\u2500\u2500\u2500").append(valueString()).append('\n');
-		}
-	}
-	private static class TerminalNode extends Token implements TreeNode {
-		public TerminalNode(Token token) {
-			super(token.type, token.text, token.line, token.column);
-		}
-		@Override
-		public String valueString() {
-			return type + ": " + text;
-		}
-		@Override
-		public String toString() {
-			return valueString();
-		}
-	}
-
-	public static class NonterminalNode extends ArrayList<TreeNode> implements TreeNode {
-		private final Nonterminal value;
-		public NonterminalNode(Nonterminal value) {
-			this.value = value;
-		}
-		NonterminalNode getNonterminal(int n) {
-			final TreeNode child = get(n);
-			return child instanceof NonterminalNode ? (NonterminalNode) child : null;
-		}
-		TerminalNode getTerminal(int n) {
-			final TreeNode child = get(n);
-			return child instanceof TerminalNode ? (TerminalNode) child : null;
-		}
-		@Override
-		public String valueString() {
-			final String original = value.toString();
-			StringBuilder stringBuilder = new StringBuilder();
-			boolean capitalize = false;
-			for (int i = 0; i < original.length(); ++i) {
-				final char c = original.charAt(i);
-				if (c == '_') {
-					capitalize = true;
+				char theChar = nextChar;
+				if (currentIndex2 == indexOfNextRule - 1) {
+					if (!isLineBreak(theChar)) {
+						rule.append(theChar);
+					}
+					++currentIndex2;
+					break;
 				} else {
-					stringBuilder.append(capitalize || i == 0 ? c : Character.toLowerCase(c));
-					capitalize = false;
+					nextChar = in.charAt(++currentIndex2);
+					if (isLineBreak(theChar)) {
+						if (!isLineBreak(nextChar)) {
+							rule.append("\n\t// ");
+						}
+					} else {
+						rule.append(theChar);
+					}
 				}
 			}
-			return stringBuilder.toString();
+			return rule.toString();
 		}
-		@Override
-		public void buildString(StringBuilder full, StringBuilder indent, boolean isLastChild) {
-			TreeNode.super.buildString(full, indent, isLastChild);
-			if (size() > 0) {
-				indent.append(isLastChild ? ' ' : '\u2502').append("   ");
-				final TreeNode lastChild = get(size() - 1);
-				for (TreeNode child : this)
-					child.buildString(full, indent, child == lastChild);
-				indent.setLength(indent.length() - 4);
-			}
+		boolean isLineBreak(char c) {
+			return c == '\n' || c == '\r' || c == '\f';
 		}
-		@Override
-		public String toString() {
-			final StringBuilder full = new StringBuilder().append(valueString()).append('\n');
-			if (size() > 0) {
-				final StringBuilder indent = new StringBuilder();
-				final TreeNode lastChild = get(size() - 1);
-				for (TreeNode child : this)
-					child.buildString(full, indent, child == lastChild);
-			}
-			return full.toString();
+		void setIndexOfNextRule() {
+			indexOfNextRule = currentIndex;
 		}
 	}
 }

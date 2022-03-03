@@ -1,54 +1,40 @@
-//package main;
-//import javafx.application.Application;
-//import javafx.scene.Group;
-//import javafx.scene.Scene;
-//import javafx.scene.control.TreeView;
-//import javafx.stage.Stage;
-//import tree.NonterminalNode;
-//import tree.TreeNode;
-//import tree.TreeTightener;
-//import java.io.IOException;
-//import java.util.ArrayList;
-//import java.util.List;
-//
-//public class ParserDemo extends Application {
-//	public static void main(String[] args) {
-//		launch(args);
-//	}
-//	@Override
-//	public void start(Stage primaryStage) {
-//		ArrayList<Token> tokens;
-//		try {
-//			tokens = new Lexer().lex("in/MyClass.java");
-//		} catch (IOException e) {
-//			return;
-//		}
-//
-//		for (Token token : tokens)
-//			System.out.println(token);
-//
-//		Parser parser = new Parser(tokens);
-//
-//		NonterminalNode start = parser.parse();
-//
-//		//new TreeTightener().tighten(start);
-//
-//		System.out.println(start);
-//
-//		primaryStage.setScene(new Scene(new Group(new TreeView<String>(parser.debugRoot){{
-//			prefWidthProperty().bind(primaryStage.widthProperty());
-//			prefHeightProperty().bind(primaryStage.heightProperty());
-//		}}), 900, 900));
-//
-//		primaryStage.show();
-//
-//
-//	}
-//}
-package main;
-import java.io.IOException;
+package demos;
+import javafx.application.Application;
+import javafx.scene.Group;
+import javafx.scene.Scene;
+import javafx.scene.control.TreeItem;
+import javafx.scene.control.TreeView;
+import javafx.stage.Stage;
+import main.Lexer;
+import main.Parser;
+import tree.NonterminalNode;
 public class ParserDemo {
-	public static void main(String[] args) throws IOException {
-		System.out.println(new Parser(new Lexer().lex("in/MyClass.java")).parse());
+	private static final boolean USE_DEBUG_UI = false;
+
+	public static void main(String[] args) {
+		Parser parser = new Parser();
+		NonterminalNode root = parser.parse(new Lexer().lexFromFile("in/examples/Example4.java"));
+		//root.tighten();
+		System.out.println(root);
+		if (USE_DEBUG_UI) {
+			ParserDemoWithDebugUI.launch(args, parser.debugRoot);
+		}
+	}
+
+	public static class ParserDemoWithDebugUI extends Application {
+		private static TreeItem<String> treeRoot;
+		private static void launch(String[] args, TreeItem<String> treeRoot) {
+			ParserDemoWithDebugUI.treeRoot = treeRoot;
+			Application.launch(args);
+		}
+		@Override
+		public void start(Stage primaryStage) {
+			primaryStage.setScene(new Scene(new Group(new TreeView<String>(treeRoot){{
+				prefWidthProperty().bind(primaryStage.widthProperty());
+				prefHeightProperty().bind(primaryStage.heightProperty());
+			}}), 900, 900));
+			primaryStage.show();
+		}
 	}
 }
+

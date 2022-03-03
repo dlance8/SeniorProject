@@ -1,4 +1,4 @@
-package GUI;
+package app;
 import main.Lexer;
 import main.Parser;
 import main.Token;

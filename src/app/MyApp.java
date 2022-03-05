@@ -17,9 +17,9 @@ public class MyApp extends Application {
 	private boolean javaIsSaved = true, pythonIsSaved = true;
 	private File javaFile, pythonFile;
 	private Stage primaryStage;
+
 	private final FileChooser javaFileChooser = new FileChooser(), pythonFileChooser = new FileChooser();
 	private final TextArea javaArea = new TextArea(), pythonArea = new TextArea();
-
 	private final Alert alert = new Alert(null, "Unsaved Java and Python code will be lost.", ButtonType.OK, ButtonType.CANCEL);
 
 	@Override
@@ -106,6 +106,7 @@ public class MyApp extends Application {
 		javaArea.setFont(font);
 		pythonArea.setFont(font);
 
+
 		Scene scene = new Scene(vBox, 1280, 720);
 
 		scene.setOnKeyPressed(e -> {
@@ -160,13 +161,7 @@ public class MyApp extends Application {
 		return !(javaIsSaved && pythonIsSaved) && alert.showAndWait().get() != ButtonType.OK;
 	}
 	private void translate() {
-		// TODO - connect to actual translation methods (when finished)
-		Scanner scanner = new Scanner(javaArea.getText());
-		StringBuilder stringBuilder = new StringBuilder();
-		while (scanner.hasNextLine()) {
-			stringBuilder.append("PYTHON: ").append(scanner.nextLine()).append('\n');
-		}
-		pythonArea.setText(stringBuilder.toString());
+		pythonArea.setText(new ProcessManager().go(javaArea.getText()));
 		pythonIsSaved = false;
 		updateTitle();
 	}

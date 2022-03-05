@@ -5,15 +5,15 @@ import javafx.scene.Scene;
 import javafx.scene.control.TreeItem;
 import javafx.scene.control.TreeView;
 import javafx.stage.Stage;
-import main.Lexer;
-import main.Parser;
-import tree.NonterminalNode;
+import processes.Lexer;
+import processes.Parser;
+import datastructures.tree.NonterminalNode;
 public class ParserDemo {
 	private static final boolean USE_DEBUG_UI = false;
 
 	public static void main(String[] args) {
 		Parser parser = new Parser();
-		NonterminalNode root = parser.parse(new Lexer().lexFromFile("MyClass.java"));
+		NonterminalNode root = parser.parse(new Lexer().lexFromFile("in/MyClass.java"));
 		//root.tighten();
 		System.out.println(root);
 		if (USE_DEBUG_UI) {

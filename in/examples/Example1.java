@@ -9,25 +9,18 @@ public class Example1 {
 
 /**
  *
- * class MyClass:
- * 		def main():
- * 			print("Hello, World")
+ * class Example1:
+ *      def main():
+ *          print("hello world")
+ *
+ * if __main__ == __name__:
+ *      Exmaple1.main()
  *
  *
- * ClassDeclaration.getKeyword().getIdentifier()
- * ClassBody.ClassBodyDeclaration.MainMethodDeclaration.getIdentifier().getArguments().getMethodBody()
+ * class Example1:
+ *      pass
  *
- * makeClass(){
- *      print(keyword + identifier + ":" + "\n" + "\t+)  // class MyClass: newline + tab
  *
- * makeMainMethod(){
- *      print("def" + identifier + "(" + arguments ")" + ":" + "\n" + "\t"
- *      + methodBody
+ * print("hello world")
  *
- * }
- *
- * makeMethod(){
- *
- * }
- * }
  */

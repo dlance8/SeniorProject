@@ -1,6 +1,6 @@
 package demos;
-import main.Lexer;
-import main.Token;
+import processes.Lexer;
+import datastructures.Token;
 
 import java.io.IOException;
 import java.util.ArrayList;

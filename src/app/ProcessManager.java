@@ -1,69 +1,103 @@
 package app;
-import main.Lexer;
-import main.Parser;
-import main.Token;
-import main.Translator;
-import tree.NonterminalNode;
+import processes.Lexer;
+import processes.Parser;
+import datastructures.Token;
+import processes.Translator;
+import datastructures.tree.NonterminalNode;
 import java.util.ArrayList;
-public class ProcessManager {
-	private boolean inProgress;
+public final class ProcessManager {
+	public static void main(String[] args) {
+		System.out.println(new ProcessManager().go("\\u"));
+	}
 
+	private boolean failed, inProgress, running;
 	private ArrayList<Token> lexerResult;
 	private NonterminalNode parserResult;
-	private String translatorResult;
+	private String finalResult, translatorResult;
+	private Thread processManagementThread;
 
-	public synchronized String run(String input) {
-		Lexer lexer = new Lexer();
-		Parser parser = new Parser();
-		Translator translator = new Translator();
+	public String go(String input) {
+		failed = false;
+		running = true;
+		(processManagementThread = new Thread(() -> {
+			finalResult = runAllProcesses(input);
+			running = false;
+			synchronized (ProcessManager.this) {
+				ProcessManager.this.notifyAll();
+			}
+		})).start();
+		synchronized (ProcessManager.this) {
+			while (running) {
+				try {
+					ProcessManager.this.wait();
+				} catch (InterruptedException e) {
+					e.printStackTrace();
+					System.exit(1);
+				}
+			}
+		}
+		return finalResult;
+	}
+	private String runAllProcesses(String input) {
 
-
+		final Lexer lexer = new Lexer(processManagementThread);
+		inProgress = true;
 		new Thread(() -> {
-			inProgress = true;
-			lexerResult = lexer.lexFromFile(input);
+			lexerResult = lexer.lex(input);
 			inProgress = false;
-			synchronized (this) {
-				notify();
+			synchronized (lexer) {
+				lexer.notifyAll();
 			}
 		}).start();
-		try {
+		synchronized (lexer) {
 			while (inProgress) {
-				wait();
+				try {
+					lexer.wait();
+				} catch (InterruptedException e) {
+					failed = true;
+					return lexer.getErrorMessage();
+				}
 			}
-		} catch (InterruptedException e) {
-			return lexer.getErrorMessage();
 		}
 
+		final Parser parser = new Parser(processManagementThread);
+		inProgress = true;
 		new Thread(() -> {
-			inProgress = true;
 			parserResult = parser.parse(lexerResult);
 			inProgress = false;
-			synchronized (this) {
-				notify();
+			synchronized (parser) {
+				parser.notifyAll();
 			}
 		}).start();
-		try {
+		synchronized (parser) {
 			while (inProgress) {
-				wait();
+				try {
+					parser.wait();
+				} catch (InterruptedException e) {
+					failed = true;
+					return parser.getErrorMessage();
+				}
 			}
-		} catch (InterruptedException e) {
-			return parser.getErrorMessage();
 		}
 
+		final Translator translator = new Translator(processManagementThread);
+		inProgress = true;
 		new Thread(() -> {
-			inProgress = true;
 			translatorResult = translator.translate(parserResult);
 			inProgress = false;
-			synchronized (this) {
-				notify();
+			synchronized (translator) {
+				translator.notifyAll();
 			}
 		}).start();
-		try {
+		synchronized (translator) {
 			while (inProgress) {
-				wait();
+				try {
+					translator.wait();
+				} catch (InterruptedException e) {
+					failed = true;
+					return translator.getErrorMessage();
+				}
 			}
-		} catch (InterruptedException e) {
-			return translator.getErrorMessage();
 		}
 
 		return translatorResult;
